@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Recipe, Ingredient } from '@/types/recipe';
-import { getIngredientSubstitutions } from '@/lib/api';
+import { getIngredientSubstitutions, IngredientSubstitution } from '@/lib/api';
 import { RefreshCw, CheckCircle, AlertCircle, Lightbulb } from 'lucide-react';
 
 interface IngredientSubstitutionsProps {
@@ -16,7 +16,7 @@ interface IngredientSubstitutionsProps {
 
 interface SubstitutionSuggestion {
   original: Ingredient;
-  substitutes: string[];
+  substitutes: IngredientSubstitution[];
   isAvailable: boolean;
   priority: 'high' | 'medium' | 'low';
 }
@@ -44,47 +44,77 @@ export default function IngredientSubstitutions({
       if (missingIngredients.length === 0) return;
       
       setLoading(true);
-      const suggestions: SubstitutionSuggestion[] = [];
+      
+      try {
+        // Get substitutions for all missing ingredients at once
+        const ingredientNames = missingIngredients.map(ing => ing.name);
+        const response = await getIngredientSubstitutions(ingredientNames);
+        
+        if (response.success) {
+          const suggestions: SubstitutionSuggestion[] = [];
 
-      for (const ingredient of missingIngredients) {
-        try {
-          const subs = await getIngredientSubstitutions(ingredient.name);
-          
-          // Check if user has any of the substitutes
-          const availableSubstitutes = subs.filter(sub =>
-            userIngredients.some(userIng => 
-              sub.toLowerCase().includes(userIng.toLowerCase()) ||
-              userIng.toLowerCase().includes(sub.toLowerCase())
-            )
-          );
+          for (const ingredient of missingIngredients) {
+            // Find substitutions for this specific ingredient
+            const ingredientSubs = response.substitutions.filter(sub => 
+              sub.original.toLowerCase() === ingredient.name.toLowerCase() ||
+              ingredient.name.toLowerCase().includes(sub.original.toLowerCase())
+            );
+            
+            // Check if user has any of the substitutes
+            const availableSubstitutes = ingredientSubs.filter(sub =>
+              userIngredients.some(userIng => 
+                sub.substitute.toLowerCase().includes(userIng.toLowerCase()) ||
+                userIng.toLowerCase().includes(sub.substitute.toLowerCase())
+              )
+            );
 
-          // Determine priority based on ingredient importance and availability
-          let priority: 'high' | 'medium' | 'low' = 'medium';
-          if (ingredient.optional) {
-            priority = 'low';
-          } else if (availableSubstitutes.length > 0) {
-            priority = 'high';
+            // Determine priority based on ingredient importance and availability
+            let priority: 'high' | 'medium' | 'low' = 'medium';
+            if (ingredient.optional) {
+              priority = 'low';
+            } else if (availableSubstitutes.length > 0) {
+              priority = 'high';
+            }
+
+            suggestions.push({
+              original: ingredient,
+              substitutes: ingredientSubs,
+              isAvailable: availableSubstitutes.length > 0,
+              priority
+            });
           }
 
-          suggestions.push({
-            original: ingredient,
-            substitutes: subs,
-            isAvailable: availableSubstitutes.length > 0,
-            priority
+          // Sort by priority (high first)
+          suggestions.sort((a, b) => {
+            const priorityOrder = { high: 3, medium: 2, low: 1 };
+            return priorityOrder[b.priority] - priorityOrder[a.priority];
           });
-        } catch (error) {
-          console.error('Error getting substitutions for:', ingredient.name, error);
+
+          setSubstitutions(suggestions);
+        } else {
+          console.error('Failed to get substitutions:', response.error);
+          // Fallback: create suggestions with empty substitutes
+          const fallbackSuggestions: SubstitutionSuggestion[] = missingIngredients.map(ingredient => ({
+            original: ingredient,
+            substitutes: [],
+            isAvailable: false,
+            priority: ingredient.optional ? 'low' : 'medium'
+          }));
+          setSubstitutions(fallbackSuggestions);
         }
+      } catch (error) {
+        console.error('Error loading substitutions:', error);
+        // Fallback: create suggestions with empty substitutes
+        const fallbackSuggestions: SubstitutionSuggestion[] = missingIngredients.map(ingredient => ({
+          original: ingredient,
+          substitutes: [],
+          isAvailable: false,
+          priority: ingredient.optional ? 'low' : 'medium'
+        }));
+        setSubstitutions(fallbackSuggestions);
+      } finally {
+        setLoading(false);
       }
-
-      // Sort by priority (high first)
-      suggestions.sort((a, b) => {
-        const priorityOrder = { high: 3, medium: 2, low: 1 };
-        return priorityOrder[b.priority] - priorityOrder[a.priority];
-      });
-
-      setSubstitutions(suggestions);
-      setLoading(false);
     };
 
     loadSubstitutions();
@@ -193,10 +223,10 @@ export default function IngredientSubstitutions({
                   </p>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {suggestion.substitutes.map((substitute, index) => {
+                    {suggestion.substitutes.map((substitution, index) => {
                       const userHasIt = userIngredients.some(userIng => 
-                        substitute.toLowerCase().includes(userIng.toLowerCase()) ||
-                        userIng.toLowerCase().includes(substitute.toLowerCase())
+                        substitution.substitute.toLowerCase().includes(userIng.toLowerCase()) ||
+                        userIng.toLowerCase().includes(substitution.substitute.toLowerCase())
                       );
 
                       return (
@@ -209,14 +239,33 @@ export default function IngredientSubstitutions({
                           }`}
                         >
                           <div className="flex items-center justify-between">
-                            <span className="font-medium">
-                              {userHasIt && '✓ '}
-                              {substitute}
-                            </span>
+                            <div>
+                              <div className="font-medium">
+                                {userHasIt && '✓ '}
+                                {substitution.substitute}
+                              </div>
+                              <div className="text-xs text-gray-600 mt-1">
+                                Ratio: {substitution.ratio}
+                                {substitution.availability && (
+                                  <span className={`ml-2 px-1 py-0.5 rounded text-xs ${
+                                    substitution.availability === 'common' ? 'bg-green-100 text-green-700' :
+                                    substitution.availability === 'specialty' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-red-100 text-red-700'
+                                  }`}>
+                                    {substitution.availability}
+                                  </span>
+                                )}
+                              </div>
+                              {substitution.notes && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {substitution.notes}
+                                </div>
+                              )}
+                            </div>
                             {userHasIt && (
                               <button
-                                onClick={() => handleApplySubstitution(suggestion.original.name, substitute)}
-                                className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors"
+                                onClick={() => handleApplySubstitution(suggestion.original.name, substitution.substitute)}
+                                className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors ml-2 flex-shrink-0"
                               >
                                 Use This
                               </button>
