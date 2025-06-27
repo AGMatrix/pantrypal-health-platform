@@ -13,7 +13,7 @@ interface User {
 }
 
 interface UserData {
-  favorites: string[];
+  favorites: any[];
   shoppingList: ShoppingListItem[];
   searchHistory: string[];
   preferences: {
