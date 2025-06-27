@@ -66,7 +66,23 @@ export default function FavoritesModal({
   const handleViewRecipe = (favorite: Favorite) => {
     if (onViewRecipe && favorite.recipe) {
       console.log('👀 FavoritesModal: Viewing recipe:', favorite.recipe.title);
-      onViewRecipe(favorite.recipe);
+      // Convert the favorite.recipe to match the expected Recipe type
+      const recipeData: Recipe = {
+        id: favorite.recipe.id || favorite.recipeId,
+        title: favorite.recipe.title || '',
+        description: favorite.recipe.description,
+        ingredients: favorite.recipe.ingredients || [],
+        instructions: favorite.recipe.instructions || [],
+        cookingTime: favorite.recipe.cookingTime,
+        servings: favorite.recipe.servings,
+        difficulty: favorite.recipe.difficulty,
+        cuisine: favorite.recipe.cuisine,
+        dietary: favorite.recipe.dietary,
+        rating: favorite.recipe.rating,
+        image_url: favorite.recipe.image_url || favorite.recipe.image,
+        image: favorite.recipe.image || favorite.recipe.image_url,
+      };
+      onViewRecipe(recipeData);
       onClose();
     } else {
       console.warn('⚠️ FavoritesModal: No recipe data or onViewRecipe handler');
@@ -76,7 +92,23 @@ export default function FavoritesModal({
   const handleAddToShoppingList = (favorite: Favorite) => {
     if (onAddToShoppingList && favorite.recipe) {
       console.log('🛒 FavoritesModal: Adding to shopping list:', favorite.recipe.title);
-      onAddToShoppingList(favorite.recipe);
+      // Convert the favorite.recipe to match the expected Recipe type
+      const recipeData: Recipe = {
+        id: favorite.recipe.id || favorite.recipeId,
+        title: favorite.recipe.title || '',
+        description: favorite.recipe.description,
+        ingredients: favorite.recipe.ingredients || [],
+        instructions: favorite.recipe.instructions || [],
+        cookingTime: favorite.recipe.cookingTime,
+        servings: favorite.recipe.servings,
+        difficulty: favorite.recipe.difficulty,
+        cuisine: favorite.recipe.cuisine,
+        dietary: favorite.recipe.dietary,
+        rating: favorite.recipe.rating,
+        image_url: favorite.recipe.image_url || favorite.recipe.image,
+        image: favorite.recipe.image || favorite.recipe.image_url,
+      };
+      onAddToShoppingList(recipeData);
     } else {
       console.warn('⚠️ FavoritesModal: No recipe data or onAddToShoppingList handler');
     }
