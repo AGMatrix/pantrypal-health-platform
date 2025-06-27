@@ -80,7 +80,6 @@ export default function FavoritesModal({
         rating: favorite.recipe.rating || 0,
         image_url: favorite.recipe.image_url || favorite.recipe.image || '',
         image: favorite.recipe.image || favorite.recipe.image_url || '',
-        ...(favorite.recipe.dietary && { dietary: favorite.recipe.dietary }),
       };
       onViewRecipe(recipeData);
       onClose();
@@ -106,7 +105,6 @@ export default function FavoritesModal({
         rating: favorite.recipe.rating || 0,
         image_url: favorite.recipe.image_url || favorite.recipe.image || '',
         image: favorite.recipe.image || favorite.recipe.image_url || '',
-        ...(favorite.recipe.dietary && { dietary: favorite.recipe.dietary }),
       };
       onAddToShoppingList(recipeData);
     } else {
