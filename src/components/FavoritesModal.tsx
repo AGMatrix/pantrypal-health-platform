@@ -80,6 +80,15 @@ export default function FavoritesModal({
         rating: favorite.recipe.rating || 0,
         // Use only the 'image' property as per Recipe type
         image: (favorite.recipe as any).image_url || (favorite.recipe as any).image || favorite.recipe.image || '',
+        // Add required properties
+        dietary: (favorite.recipe as any).dietary || [],
+        nutrition: (favorite.recipe as any).nutrition || {
+          calories: 0,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
+          fiber: 0
+        }
       };
       onViewRecipe(recipeData);
       onClose();
@@ -105,6 +114,15 @@ export default function FavoritesModal({
         rating: favorite.recipe.rating || 0,
         // Use only the 'image' property as per Recipe type
         image: (favorite.recipe as any).image_url || (favorite.recipe as any).image || favorite.recipe.image || '',
+        // Add required properties
+        dietary: (favorite.recipe as any).dietary || [],
+        nutrition: (favorite.recipe as any).nutrition || {
+          calories: 0,
+          protein: 0,
+          carbs: 0,
+          fat: 0,
+          fiber: 0
+        }
       };
       onAddToShoppingList(recipeData);
     } else {
