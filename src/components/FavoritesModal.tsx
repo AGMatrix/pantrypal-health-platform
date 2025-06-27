@@ -70,17 +70,17 @@ export default function FavoritesModal({
       const recipeData: Recipe = {
         id: favorite.recipe.id || favorite.recipeId,
         title: favorite.recipe.title || '',
-        description: favorite.recipe.description,
+        description: favorite.recipe.description || '',
         ingredients: favorite.recipe.ingredients || [],
         instructions: favorite.recipe.instructions || [],
         cookingTime: favorite.recipe.cookingTime || 0,
         servings: favorite.recipe.servings || 1,
-        difficulty: favorite.recipe.difficulty,
-        cuisine: favorite.recipe.cuisine,
-        dietary: favorite.recipe.dietary,
-        rating: favorite.recipe.rating,
-        image_url: favorite.recipe.image_url || favorite.recipe.image,
-        image: favorite.recipe.image || favorite.recipe.image_url,
+        difficulty: favorite.recipe.difficulty || 'Easy',
+        cuisine: favorite.recipe.cuisine || '',
+        dietary: favorite.recipe.dietary || [],
+        rating: favorite.recipe.rating || 0,
+        image_url: favorite.recipe.image_url || favorite.recipe.image || '',
+        image: favorite.recipe.image || favorite.recipe.image_url || '',
       };
       onViewRecipe(recipeData);
       onClose();
@@ -96,17 +96,17 @@ export default function FavoritesModal({
       const recipeData: Recipe = {
         id: favorite.recipe.id || favorite.recipeId,
         title: favorite.recipe.title || '',
-        description: favorite.recipe.description,
+        description: favorite.recipe.description || '',
         ingredients: favorite.recipe.ingredients || [],
         instructions: favorite.recipe.instructions || [],
         cookingTime: favorite.recipe.cookingTime || 0,
         servings: favorite.recipe.servings || 1,
-        difficulty: favorite.recipe.difficulty,
-        cuisine: favorite.recipe.cuisine,
-        dietary: favorite.recipe.dietary,
-        rating: favorite.recipe.rating,
-        image_url: favorite.recipe.image_url || favorite.recipe.image,
-        image: favorite.recipe.image || favorite.recipe.image_url,
+        difficulty: favorite.recipe.difficulty || 'Easy',
+        cuisine: favorite.recipe.cuisine || '',
+        dietary: favorite.recipe.dietary || [],
+        rating: favorite.recipe.rating || 0,
+        image_url: favorite.recipe.image_url || favorite.recipe.image || '',
+        image: favorite.recipe.image || favorite.recipe.image_url || '',
       };
       onAddToShoppingList(recipeData);
     } else {
