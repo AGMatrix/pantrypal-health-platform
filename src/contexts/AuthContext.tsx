@@ -358,31 +358,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async (): Promise<void> => {
-    try {
+      try {
       await fetch('/api/auth/logout', { method: 'POST' });
-    } catch (error) {
-      console.error('❌ Logout error:', error);
-    }
-    
-    // Clear user state
-    setUser(null);
+  } catch (error) {
+    console.error('❌ Logout error:', error);
+  }
+  
+  // Clear user state
+  setUser(null);
+  setUserData(defaultUserData);
+  
+  // Clear localStorage for favorites system
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('userSession');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userName');
+  }
+  
+  // Dispatch event to notify other components
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('userLoggedOut'));
+  }
+  
+  console.log('✅ Logout complete - localStorage cleared, userData reset to defaults');
+};
+
+useEffect(() => {
+  // Safety check: if user is null but userData has favorites, reset userData
+  if (!user && userData && userData.favorites && userData.favorites.length > 0) {
+    console.log('🧹 Safety check: No user but favorites exist, resetting userData');
     setUserData(defaultUserData);
-    
-    // Clear localStorage for favorites system
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('userSession');
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('userName');
-    }
-    
-    // Dispatch event to notify other components
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('userLoggedOut'));
-    }
-    
-    console.log('✅ Logout complete - localStorage cleared');
-    localStorage.clear();
-  };
+  }
+}, [user, userData?.favorites]);
 
   const refreshFavoritesCount = async () => {
     try {

@@ -1,3 +1,5 @@
+// src/lib/api.ts
+
 import { Recipe, SearchRequest } from '@/types/recipe';
 import { parseRecipeResponse } from './recipeParser';
 
@@ -7,6 +9,17 @@ export interface SonarSearchResponse {
   success: boolean;
   usage?: any;
   error?: string;
+}
+
+// Advanced search parameters interface
+export interface AdvancedSearchParams {
+  ingredients?: string[];
+  dietary?: string[];
+  cuisine?: string;
+  maxTime?: number;
+  difficulty?: string;
+  budget?: number;
+  servings?: number;
 }
 
 // Check if we're on the client side and API key is available
@@ -55,6 +68,50 @@ export async function searchRecipesWithParsing(req: {
     
   } catch (error) {
     console.error('❌ AI search error:', error);
+    
+    return {
+      recipes: [],
+      rawResponse: '',
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+// ADDED: Missing searchRecipesAdvanced function
+export async function searchRecipesAdvanced(params: AdvancedSearchParams): Promise<SonarSearchResponse> {
+  try {
+    console.log('🔍 Advanced recipe search with params:', params);
+    
+    // Call our advanced search API route
+    const response = await fetch('/api/recipes/advanced-search', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(params)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.success) {
+      console.log('✅ Advanced search successful, got', data.recipes.length, 'recipes');
+      return {
+        recipes: data.recipes,
+        rawResponse: data.rawResponse || '',
+        success: true
+      };
+    } else {
+      throw new Error(data.error || 'Advanced search failed');
+    }
+    
+  } catch (error) {
+    console.error('❌ Advanced search error:', error);
     
     return {
       recipes: [],

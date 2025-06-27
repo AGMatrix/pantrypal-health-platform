@@ -271,7 +271,7 @@ export default function RecipeSearchPage() {
   const [showUserGuide, setShowUserGuide] = useState(false);
   const [isNewUser, setIsNewUser] = useState(false);
   
-  // Favorites state management (fixed implementation)
+  // Favorites state management 
   const [favorites, setFavorites] = useState<any[]>([]);
   const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
   const [favoritesError, setFavoritesError] = useState<string | null>(null);
@@ -292,6 +292,9 @@ export default function RecipeSearchPage() {
   
   const [apiStatus, setApiStatus] = useState<{ connected: boolean; message: string } | null>(null);
   const [lastSearchPrompt, setLastSearchPrompt] = useState<string>('');
+
+  // SAFETY CHECK: Safe favorites count that always returns 0 when no user
+  const safeFavoritesCount = user && userData ? (userData.favorites?.length || 0) : 0;
 
   // Helper function to properly handle the guide showing
   const handleShowGuide = () => {
@@ -325,15 +328,52 @@ export default function RecipeSearchPage() {
     }
   }, []);
 
+  // user login/logout handling
   useEffect(() => {
-    if (user) {
-      console.log('🔍 User logged in, loading favorites for:', user.email);
-      loadFavorites();
+    console.log('🔍 User or userData changed');
+    console.log('User:', user?.email || 'Not logged in');
+    console.log('UserData.favorites:', userData?.favorites?.length || 0);
+    
+    if (user && userData?.favorites) {
+      console.log('✅ Syncing page favorites with AuthContext favorites');
+      setFavorites(userData.favorites);
     } else {
-      console.log('🔍 User logged out, clearing favorites');
+      console.log('🧹 Clearing page favorites - no user or no userData.favorites');
       setFavorites([]);
+      setFavoritesError(null);
+      setIsLoadingFavorites(false);
     }
-  }, [user]);
+  }, [user, userData?.favorites]); // Watch both user AND userData.favorites
+
+  // IMMEDIATE CLEANUP: Clear favorites on mount if no user
+  useEffect(() => {
+    if (!user) {
+      console.log('🧹 No user on mount - clearing favorites');
+      setFavorites([]);
+      setFavoritesError(null);
+      setIsLoadingFavorites(false);
+    }
+  }, []); // Run once on mount
+
+  // STORAGE CLEANUP: Handle logout in other tabs
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'userEmail' || e.key === 'userSession') {
+        if (!e.newValue && e.oldValue) {
+          // User logged out in another tab
+          console.log('🧹 User logged out in another tab, clearing favorites');
+          setFavorites([]);
+          setFavoritesError(null);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   useEffect(() => {
     const handleUserLoggedOut = () => {
@@ -373,10 +413,16 @@ export default function RecipeSearchPage() {
     return headers;
   }, []);
 
-  // Check if recipe is favorite
   const isFavorite = (recipeId: string): boolean => {
     console.log('🔍 isFavorite called with:', recipeId);
+    console.log('🔍 Current user:', user?.email || 'Not logged in');
     console.log('🔍 Current favorites state:', favorites);
+    
+  
+    if (!user) {
+      console.log('🔍 No user logged in, returning false');
+      return false;
+    }
     
     if (!Array.isArray(favorites)) {
       console.warn('⚠️ Favorites is not an array:', favorites);
@@ -384,7 +430,6 @@ export default function RecipeSearchPage() {
     }
     
     const result = favorites.some((fav: any) => {
-      // Handle different possible data structures
       const favRecipeId = fav.recipeId || fav.recipe_id || fav.id;
       return favRecipeId === recipeId;
     });
@@ -393,7 +438,6 @@ export default function RecipeSearchPage() {
     return result;
   };
 
-  // Load favorites from API
   const loadFavorites = useCallback(async () => {
     console.log('🔍 MainPage: Loading favorites...');
     
@@ -405,7 +449,6 @@ export default function RecipeSearchPage() {
       return [];
     }
     
-    // Check if we already have favorites in userData
     if (userData?.favorites && userData.favorites.length > 0) {
       console.log('✅ Using favorites from AuthContext userData');
       setFavorites(userData.favorites);
@@ -439,7 +482,6 @@ export default function RecipeSearchPage() {
         
         setFavorites(favoritesArray);
         
-        // IMPORTANT: Sync back to AuthContext
         if (updateUserData) {
           await updateUserData({ favorites: favoritesArray });
         }
@@ -459,7 +501,6 @@ export default function RecipeSearchPage() {
     }
   }, [user, userData?.favorites, getApiHeaders, updateUserData]);
   
-  // Toggle favorite status
   const handleToggleFavorite = async (recipe: Recipe): Promise<void> => {
     if (!user) {
       console.log('❌ No user logged in, cannot toggle favorite');
@@ -487,14 +528,12 @@ export default function RecipeSearchPage() {
         const removeResponse = await response.json();
   
         if (removeResponse.success) {
-          // Update local page state
           setFavorites((prev) => {
             const updated = prev.filter((fav: any) => {
               const favRecipeId = fav.recipeId || fav.recipe_id || fav.id;
               return favRecipeId !== recipeId;
             });
             
-            // CRITICAL: Also update AuthContext
             if (updateUserData) {
               updateUserData({ favorites: updated });
             }
@@ -525,11 +564,9 @@ export default function RecipeSearchPage() {
         const addResponse = await response.json();
   
         if (addResponse.success && addResponse.favorite) {
-          // Update local page state
           setFavorites((prev) => {
             const updated = [...prev, addResponse.favorite];
             
-            // CRITICAL: Also update AuthContext
             if (updateUserData) {
               updateUserData({ favorites: updated });
             }
@@ -545,7 +582,6 @@ export default function RecipeSearchPage() {
       await loadFavorites();
     }
   };
-  
 
   // Enhanced favorite toggle with health tracking
   const handleToggleFavoriteWithTracking = async (recipeId: string): Promise<void> => {
@@ -642,18 +678,17 @@ export default function RecipeSearchPage() {
       console.error('❌ Main page: Error removing favorite:', error);
     }
   };
+
   const handleGuideComplete = () => {
     localStorage.setItem('pantrypal_guide_seen', 'true');
     setIsNewUser(false);
     setShowUserGuide(false);
   };
   
-  // This should run on each step without closing
   const handleStepComplete = (stepId: string) => {
     console.log('✅ Step completed:', stepId);
   };
   
-  // Load favorites on component mount
   useEffect(() => {
     console.log('🚀 MainPage: Component mounted');
     
@@ -665,26 +700,7 @@ export default function RecipeSearchPage() {
       console.log('🚀 No user on mount, ensuring favorites are cleared');
       setFavorites([]);
     }
-  }, [user]); // Only depend on user, not loadFavorites
-  
-  useEffect(() => {
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'userEmail' || e.key === 'userSession') {
-        if (!e.newValue && e.oldValue) {
-          // User logged out in another tab
-          console.log('🧹 User logged out in another tab, clearing favorites');
-          setFavorites([]);
-          setFavoritesError(null);
-        }
-      }
-    };
-  
-    window.addEventListener('storage', handleStorageChange);
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
+  }, [user]); // Only depend on user
 
   // Clear shopping recipes when user changes
   useEffect(() => {
@@ -743,20 +759,6 @@ export default function RecipeSearchPage() {
       setLoading(false);
     }
   }, [currentFilters, ingredients]);
-
-  useEffect(() => {
-    console.log('🔍 User state changed:', user?.email || 'Not logged in');
-    
-    if (user && userData?.favorites) {
-      console.log('🔍 User logged in, loading favorites for:', user.email);
-      setFavorites(userData.favorites);
-    } else {
-      console.log('🔍 User logged out, clearing favorites state');
-      setFavorites([]);
-      setFavoritesError(null);
-      setIsLoadingFavorites(false);
-    }
-  }, [user, userData?.favorites]);
 
   // Listen for recipe search events from diet plan
   useEffect(() => {
@@ -1172,7 +1174,7 @@ export default function RecipeSearchPage() {
       currentFilters.servings
     );
   }, [currentFilters]);
-  const safeFavoritesCount = user && userData ? (userData.favorites?.length || 0) : 0;
+
   // Enhanced recipe card with health tracking
   const handleViewDetails = async (recipe: Recipe) => {
     // Track recipe interaction
@@ -1285,6 +1287,18 @@ export default function RecipeSearchPage() {
     setShowShoppingList(true);
   };
 
+  const handleShowFavorites = () => {
+    if (!user) {
+      console.log('🚫 No user logged in, not showing favorites modal');
+      return;
+    }
+    
+    console.log('💖 Opening favorites modal for user:', user.email);
+    console.log('Current favorites count:', favorites.length);
+    
+    setShowFavorites(true);
+  };
+
   const clearSearch = () => {
     setIngredients([]);
     setCurrentFilters({ dietary: [] });
@@ -1296,13 +1310,52 @@ export default function RecipeSearchPage() {
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-violet-50">
+      {process.env.NODE_ENV === 'development' && (
+        <div className="fixed top-4 left-4 z-50 bg-red-500 text-white p-4 rounded-lg max-w-xs text-xs">
+          <h3 className="font-bold mb-2">DEBUG PANEL</h3>
+          <div className="space-y-1">
+            <div>User: {user?.email || 'None'}</div>
+            <div>AuthContext Favorites: {userData?.favorites?.length || 0}</div>
+            <div>Page Favorites: {favorites.length}</div>
+            <div>Safe Count: {safeFavoritesCount}</div>
+            <div>LocalStorage userEmail: {typeof window !== 'undefined' ? localStorage.getItem('userEmail') : 'N/A'}</div>
+          </div>
+          <div className="flex gap-1 mt-2">
+            <button
+              onClick={() => {
+                console.log('🧹 EMERGENCY CLEAR - Clearing all favorites data');
+                setFavorites([]);
+                if (updateUserData) {
+                  updateUserData({ favorites: [] });
+                }
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('userSession');
+                localStorage.removeItem('userName');
+              }}
+              className="bg-red-700 px-2 py-1 rounded text-xs"
+            >
+              Clear All
+            </button>
+            <button
+              onClick={() => {
+                console.log('🔄 FORCE RELOAD - Reloading favorites');
+                loadFavorites();
+              }}
+              className="bg-blue-700 px-2 py-1 rounded text-xs"
+            >
+              Reload
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Navigation with gradient */}
       <TopNavigation
-        onShowFavorites={() => setShowFavorites(true)}
+        onShowFavorites={handleShowFavorites} // Use safe function
         onShowShoppingList={() => setShowShoppingList(true)}
         onShowDietPlan={handleViewDietPlan}
         onShowAuthModal={handleLogin}
-        favoritesCount={safeFavoritesCount}
+        favoritesCount={safeFavoritesCount} // Use safe count
         onShowGuide={handleShowGuide} 
         shoppingListCount={shoppingRecipes.length}
       />
@@ -1398,7 +1451,7 @@ export default function RecipeSearchPage() {
               </div>
               <div className="flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full">
                 <Heart className="w-3 h-3" />
-                {favorites.length} Favorites
+                {safeFavoritesCount} Favorites {/* SAFETY CHECK */}
               </div>
               <div className="flex items-center gap-2 px-3 py-1 bg-purple-100 text-purple-800 rounded-full">
                 <Utensils className="w-3 h-3" />
@@ -1802,14 +1855,14 @@ export default function RecipeSearchPage() {
             
             {/* Favorites Quick Access */}
             <button
-              onClick={() => setShowFavorites(true)}
+              onClick={handleShowFavorites}
               className="group relative p-4 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-full shadow-2xl hover:shadow-3xl transform hover:scale-110 transition-all duration-300"
               title="Quick Favorites Access"
             >
               <Heart className="w-6 h-6 group-hover:scale-110 transition-transform" />
-              {favorites.length > 0 && (
+              {safeFavoritesCount > 0 && (
                 <div className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                  {favorites.length}
+                  {safeFavoritesCount}
                 </div>
               )}
             </button>
