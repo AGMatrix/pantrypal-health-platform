@@ -22,6 +22,21 @@ export interface AdvancedSearchParams {
   servings?: number;
 }
 
+// Ingredient substitution interface
+export interface IngredientSubstitution {
+  original: string;
+  substitute: string;
+  ratio: string;
+  notes?: string;
+  availability?: 'common' | 'specialty' | 'rare';
+}
+
+export interface SubstitutionResponse {
+  substitutions: IngredientSubstitution[];
+  success: boolean;
+  error?: string;
+}
+
 // Check if we're on the client side and API key is available
 function getApiKey(): string | null {
   // In client-side, we can't access process.env directly for security
@@ -120,6 +135,89 @@ export async function searchRecipesAdvanced(params: AdvancedSearchParams): Promi
       error: error instanceof Error ? error.message : 'Unknown error occurred'
     };
   }
+}
+
+// ADDED: Missing getIngredientSubstitutions function
+export async function getIngredientSubstitutions(ingredients: string[]): Promise<SubstitutionResponse> {
+  try {
+    console.log('🔄 Getting ingredient substitutions for:', ingredients);
+    
+    // Call the ingredient substitutions API route
+    const response = await fetch('/api/ingredients/substitutions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ingredients })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    
+    if (data.success) {
+      console.log('✅ Substitutions found for', data.substitutions.length, 'ingredients');
+      return {
+        substitutions: data.substitutions,
+        success: true
+      };
+    } else {
+      throw new Error(data.error || 'Failed to get substitutions');
+    }
+    
+  } catch (error) {
+    console.error('❌ Ingredient substitutions error:', error);
+    
+    // Return mock substitutions as fallback
+    const mockSubstitutions: IngredientSubstitution[] = ingredients.map(ingredient => ({
+      original: ingredient,
+      substitute: getMockSubstitute(ingredient),
+      ratio: '1:1',
+      notes: 'Common substitute available in most stores',
+      availability: 'common' as const
+    }));
+    
+    return {
+      substitutions: mockSubstitutions,
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+// Helper function to provide mock substitutions
+function getMockSubstitute(ingredient: string): string {
+  const substitutes: Record<string, string> = {
+    'butter': 'margarine or coconut oil',
+    'milk': 'almond milk or oat milk',
+    'eggs': 'flax eggs or applesauce',
+    'flour': 'almond flour or coconut flour',
+    'sugar': 'honey or maple syrup',
+    'cream': 'coconut cream or cashew cream',
+    'cheese': 'nutritional yeast or vegan cheese',
+    'chicken': 'tofu or tempeh',
+    'beef': 'mushrooms or lentils',
+    'fish': 'banana peel or jackfruit',
+    'onion': 'shallots or garlic',
+    'garlic': 'garlic powder or onion powder',
+    'lemon': 'lime or vinegar',
+    'tomato': 'red bell pepper or paprika',
+    'yogurt': 'sour cream or applesauce'
+  };
+  
+  const lowerIngredient = ingredient.toLowerCase();
+  
+  // Find a substitute based on partial matches
+  for (const [key, value] of Object.entries(substitutes)) {
+    if (lowerIngredient.includes(key)) {
+      return value;
+    }
+  }
+  
+  return `Alternative for ${ingredient}`;
 }
 
 export async function checkAPIConnection(): Promise<{ connected: boolean; message: string }> {
