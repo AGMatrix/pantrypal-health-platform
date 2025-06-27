@@ -63,7 +63,7 @@ export default function RecipeCard({
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState(
-    recipe.image || recipe.image_url || cuisineFallbacks[recipe.cuisine || 'Other'] || genericFallback
+    recipe.image || cuisineFallbacks[recipe.cuisine || 'Other'] || genericFallback
   );
   const [showDeliveryOptions, setShowDeliveryOptions] = useState(false);
   const [toggling, setToggling] = useState(false);
@@ -328,7 +328,7 @@ export default function RecipeCard({
             )}
 
             {/* Rating and Reviews */}
-            {recipe.rating && recipe.reviews && (
+            {recipe.rating && (recipe as any).reviews && (
               <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
                 <div className="flex items-center gap-1">
                   <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400 fill-current" />
@@ -337,7 +337,7 @@ export default function RecipeCard({
                   </span>
                 </div>
                 <span className="text-gray-500">
-                  ({recipe.reviews} reviews)
+                  ({(recipe as any).reviews} reviews)
                 </span>
               </div>
             )}
@@ -363,32 +363,32 @@ export default function RecipeCard({
             )}
 
             {/* Cost */}
-            {recipe.costPerServing && (
+            {(recipe as any).costPerServing && (
               <div className="flex items-center gap-1 text-gray-600">
                 <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 flex-shrink-0" />
-                <span className="font-medium truncate">{formatPrice(recipe.costPerServing)}</span>
+                <span className="font-medium truncate">{formatPrice((recipe as any).costPerServing)}</span>
               </div>
             )}
           </div>
 
           {/* Nutrition Info - Compact for Mobile */}
-          {recipe.nutrition && (
+          {(recipe as any).nutrition && (
             <div className="bg-gray-50 rounded-lg sm:rounded-xl p-2 sm:p-3">
               <div className="grid grid-cols-4 gap-2 text-xs sm:text-sm text-center">
                 <div>
-                  <div className="font-medium text-gray-900">{recipe.nutrition.calories}</div>
+                  <div className="font-medium text-gray-900">{(recipe as any).nutrition.calories}</div>
                   <div className="text-gray-600 text-xs">cal</div>
                 </div>
                 <div>
-                  <div className="font-medium text-gray-900">{recipe.nutrition.protein}g</div>
+                  <div className="font-medium text-gray-900">{(recipe as any).nutrition.protein}g</div>
                   <div className="text-gray-600 text-xs">protein</div>
                 </div>
                 <div>
-                  <div className="font-medium text-gray-900">{recipe.nutrition.carbs}g</div>
+                  <div className="font-medium text-gray-900">{(recipe as any).nutrition.carbs}g</div>
                   <div className="text-gray-600 text-xs">carbs</div>
                 </div>
                 <div>
-                  <div className="font-medium text-gray-900">{recipe.nutrition.fat}g</div>
+                  <div className="font-medium text-gray-900">{(recipe as any).nutrition.fat}g</div>
                   <div className="text-gray-600 text-xs">fat</div>
                 </div>
               </div>
@@ -403,15 +403,15 @@ export default function RecipeCard({
               </span>
             )}
             
-            {recipe.dietary && recipe.dietary.slice(0, 2).map((diet, index) => (
+            {(recipe as any).dietary && (recipe as any).dietary.slice(0, 2).map((diet: string, index: number) => (
               <span key={index} className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
                 {diet}
               </span>
             ))}
             
-            {recipe.dietary && recipe.dietary.length > 2 && (
+            {(recipe as any).dietary && (recipe as any).dietary.length > 2 && (
               <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium">
-                +{recipe.dietary.length - 2}
+                +{(recipe as any).dietary.length - 2}
               </span>
             )}
           </div>

@@ -78,8 +78,8 @@ export default function FavoritesModal({
         difficulty: (favorite.recipe.difficulty as any) || 'Easy',
         cuisine: (favorite.recipe.cuisine as any) || 'International',
         rating: favorite.recipe.rating || 0,
-        image_url: favorite.recipe.image_url || favorite.recipe.image || '',
-        image: favorite.recipe.image || favorite.recipe.image_url || '',
+        // Use only the 'image' property as per Recipe type
+        image: (favorite.recipe as any).image_url || (favorite.recipe as any).image || favorite.recipe.image || '',
       };
       onViewRecipe(recipeData);
       onClose();
@@ -103,8 +103,8 @@ export default function FavoritesModal({
         difficulty: (favorite.recipe.difficulty as any) || 'Easy',
         cuisine: (favorite.recipe.cuisine as any) || 'International',
         rating: favorite.recipe.rating || 0,
-        image_url: favorite.recipe.image_url || favorite.recipe.image || '',
-        image: favorite.recipe.image || favorite.recipe.image_url || '',
+        // Use only the 'image' property as per Recipe type
+        image: (favorite.recipe as any).image_url || (favorite.recipe as any).image || favorite.recipe.image || '',
       };
       onAddToShoppingList(recipeData);
     } else {
@@ -162,7 +162,7 @@ export default function FavoritesModal({
         recipe.title?.toLowerCase().includes(searchLower) ||
         recipe.description?.toLowerCase().includes(searchLower) ||
         recipe.cuisine?.toLowerCase().includes(searchLower) ||
-        (Array.isArray(recipe.dietary) && recipe.dietary.some(diet => 
+        (Array.isArray((recipe as any).dietary) && (recipe as any).dietary.some((diet: string) => 
           diet.toLowerCase().includes(searchLower)
         ));
       
@@ -378,7 +378,7 @@ export default function FavoritesModal({
               <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredFavorites.map((favorite) => {
                   const recipe = favorite.recipe;
-                  const imageUrl = recipe?.image_url || recipe?.image;
+                  const imageUrl = (recipe as any)?.image_url || (recipe as any)?.image || recipe?.image;
                   
                   return (
                     <div
@@ -463,10 +463,10 @@ export default function FavoritesModal({
                               {recipe.difficulty}
                             </span>
                           )}
-                          {recipe?.dietary && Array.isArray(recipe.dietary) && recipe.dietary.length > 0 && (
+                          {(recipe as any)?.dietary && Array.isArray((recipe as any).dietary) && (recipe as any).dietary.length > 0 && (
                             <span className="px-2 py-1 sm:px-3 sm:py-1 bg-green-100 text-green-700 text-xs rounded-full font-medium">
-                              {recipe.dietary[0]}
-                              {recipe.dietary.length > 1 && ` +${recipe.dietary.length - 1}`}
+                              {(recipe as any).dietary[0]}
+                              {(recipe as any).dietary.length > 1 && ` +${(recipe as any).dietary.length - 1}`}
                             </span>
                           )}
                         </div>

@@ -59,10 +59,10 @@ export default function RecipeDetailsModal({
       amount: typeof ingredient.amount === 'number' 
         ? Math.round((ingredient.amount * scalingFactor) * 100) / 100 
         : ingredient.amount || 0,
-      estimatedPrice: ingredient.estimatedPrice ? ingredient.estimatedPrice * scalingFactor : undefined
+      estimatedPrice: (ingredient as any).estimatedPrice ? (ingredient as any).estimatedPrice * scalingFactor : undefined
     }));
 
-  const totalCost = scaledIngredients.reduce((sum, ing) => sum + (ing.estimatedPrice || 0), 0);
+  const totalCost = scaledIngredients.reduce((sum, ing) => sum + ((ing as any).estimatedPrice || 0), 0);
 
   const missingIngredients = scaledIngredients.filter(ingredient => {
     if (!ingredient?.name) return false;
@@ -200,7 +200,7 @@ export default function RecipeDetailsModal({
                 </div>
                 <div className="flex items-center gap-1">
                   <DollarSign className="w-3 h-3 text-green-600" />
-                  <span>{formatPrice(recipe.costPerServing || 0)}/serving</span>
+                  <span>{formatPrice((recipe as any).costPerServing || 0)}/serving</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="px-1 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">
@@ -380,7 +380,7 @@ export default function RecipeDetailsModal({
                                   {hasIngredient && '✓ '}
                                   {ingredient.amount || 0} {ingredient.unit || ''} {ingredient.name || 'Unknown ingredient'}
                                 </span>
-                                {ingredient.optional && (
+                                {(ingredient as any).optional && (
                                   <span className="text-xs bg-gray-200 text-gray-600 px-1 py-0.5 rounded ml-1">
                                     Optional
                                   </span>
@@ -397,9 +397,9 @@ export default function RecipeDetailsModal({
                                 </button>
                               )}
                             </div>
-                            {ingredient.estimatedPrice && (
+                            {(ingredient as any).estimatedPrice && (
                               <div className="text-xs text-gray-600 mt-0.5">
-                                ~{formatPrice(ingredient.estimatedPrice)}
+                                ~{formatPrice((ingredient as any).estimatedPrice)}
                               </div>
                             )}
                           </div>
@@ -446,37 +446,37 @@ export default function RecipeDetailsModal({
           </div>
 
           {/* Nutrition Info*/}
-          {recipe.nutrition && (
+          {(recipe as any).nutrition && (
             <div className="mt-6 pt-4 border-t border-gray-200">
               <h4 className="font-medium text-gray-900 mb-3 text-sm">Nutrition Information</h4>
               <div className="grid grid-cols-5 gap-3 p-3 bg-gray-50 rounded-lg text-center">
                 <div>
                   <div className="text-lg font-bold text-gray-900">
-                    {Math.round((recipe.nutrition.calories || 0) * scalingFactor)}
+                    {Math.round(((recipe as any).nutrition.calories || 0) * scalingFactor)}
                   </div>
                   <div className="text-xs text-gray-600">Calories</div>
                 </div>
                 <div>
                   <div className="text-lg font-semibold text-gray-900">
-                    {Math.round((recipe.nutrition.protein || 0) * scalingFactor)}g
+                    {Math.round(((recipe as any).nutrition.protein || 0) * scalingFactor)}g
                   </div>
                   <div className="text-xs text-gray-600">Protein</div>
                 </div>
                 <div>
                   <div className="text-lg font-semibold text-gray-900">
-                    {Math.round((recipe.nutrition.carbs || 0) * scalingFactor)}g
+                    {Math.round(((recipe as any).nutrition.carbs || 0) * scalingFactor)}g
                   </div>
                   <div className="text-xs text-gray-600">Carbs</div>
                 </div>
                 <div>
                   <div className="text-lg font-semibold text-gray-900">
-                    {Math.round((recipe.nutrition.fat || 0) * scalingFactor)}g
+                    {Math.round(((recipe as any).nutrition.fat || 0) * scalingFactor)}g
                   </div>
                   <div className="text-xs text-gray-600">Fat</div>
                 </div>
                 <div>
                   <div className="text-lg font-semibold text-gray-900">
-                    {Math.round((recipe.nutrition.fiber || 0) * scalingFactor)}g
+                    {Math.round(((recipe as any).nutrition.fiber || 0) * scalingFactor)}g
                   </div>
                   <div className="text-xs text-gray-600">Fiber</div>
                 </div>
