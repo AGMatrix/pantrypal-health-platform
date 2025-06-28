@@ -37,52 +37,54 @@ export interface SubstitutionResponse {
   error?: string;
 }
 
-// Check if we're on the client side and API key is available
-function getApiKey(): string | null {
-  // In client-side, we can't access process.env directly for security
-  // The API calls should be made through your API routes
-  return null;
-}
-
 export async function searchRecipesWithParsing(req: { 
   prompt: string;
   maxResults?: number;
+  ingredients?: string[];
+  filters?: any;
 }): Promise<SonarSearchResponse> {
   try {
     console.log('🚀 Searching recipes via API route:', req.prompt);
     
     // Call our API route instead of directly calling Perplexity
-    const response = await fetch('/api/recipes/ai-search', {
+    const response = await fetch('/api/recipes/search-with-parsing', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         prompt: req.prompt,
-        maxResults: req.maxResults || 5
+        maxResults: req.maxResults || 5,
+        ingredients: req.ingredients || [],
+        filters: req.filters || {}
       })
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+      }
       throw new Error(errorData.error || `HTTP ${response.status}`);
     }
 
     const data = await response.json();
     
-    if (data.success) {
-      console.log('✅ AI search successful, got', data.recipes.length, 'recipes');
+    if (data.success && data.data && Array.isArray(data.data.recipes)) {
+      console.log('✅ Search with parsing successful, got', data.data.recipes.length, 'recipes');
       return {
-        recipes: data.recipes,
-        rawResponse: data.rawResponse || '',
+        recipes: data.data.recipes,
+        rawResponse: data.data.rawResponse || '',
         success: true
       };
     } else {
-      throw new Error(data.error || 'AI search failed');
+      throw new Error(data.error || 'Search with parsing failed');
     }
     
   } catch (error) {
-    console.error('❌ AI search error:', error);
+    console.error('❌ Search with parsing error:', error);
     
     return {
       recipes: [],
@@ -93,7 +95,6 @@ export async function searchRecipesWithParsing(req: {
   }
 }
 
-// ADDED: Missing searchRecipesAdvanced function
 export async function searchRecipesAdvanced(params: AdvancedSearchParams): Promise<SonarSearchResponse> {
   try {
     console.log('🔍 Advanced recipe search with params:', params);
@@ -108,17 +109,22 @@ export async function searchRecipesAdvanced(params: AdvancedSearchParams): Promi
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+      }
       throw new Error(errorData.error || `HTTP ${response.status}`);
     }
 
     const data = await response.json();
     
-    if (data.success) {
-      console.log('✅ Advanced search successful, got', data.recipes.length, 'recipes');
+    if (data.success && data.data && Array.isArray(data.data.recipes)) {
+      console.log('✅ Advanced search successful, got', data.data.recipes.length, 'recipes');
       return {
-        recipes: data.recipes,
-        rawResponse: data.rawResponse || '',
+        recipes: data.data.recipes,
+        rawResponse: data.data.rawResponse || '',
         success: true
       };
     } else {
@@ -137,7 +143,6 @@ export async function searchRecipesAdvanced(params: AdvancedSearchParams): Promi
   }
 }
 
-// ADDED: Missing getIngredientSubstitutions function
 export async function getIngredientSubstitutions(ingredients: string[]): Promise<SubstitutionResponse> {
   try {
     console.log('🔄 Getting ingredient substitutions for:', ingredients);
@@ -152,13 +157,18 @@ export async function getIngredientSubstitutions(ingredients: string[]): Promise
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = { error: `HTTP ${response.status}: ${response.statusText}` };
+      }
       throw new Error(errorData.error || `HTTP ${response.status}`);
     }
 
     const data = await response.json();
     
-    if (data.success) {
+    if (data.success && Array.isArray(data.substitutions)) {
       console.log('✅ Substitutions found for', data.substitutions.length, 'ingredients');
       return {
         substitutions: data.substitutions,
@@ -231,19 +241,19 @@ export async function checkAPIConnection(): Promise<{ connected: boolean; messag
       }
     });
 
-    const data = await response.json();
-    
-    if (response.ok) {
-      return {
-        connected: data.apiConnected || false,
-        message: data.message || 'API connection checked'
-      };
-    } else {
+    if (!response.ok) {
       return {
         connected: false,
-        message: data.message || 'API health check failed'
+        message: `Health check failed: HTTP ${response.status}`
       };
     }
+
+    const data = await response.json();
+    
+    return {
+      connected: data.apiConnected || false,
+      message: data.message || 'API connection checked'
+    };
   } catch (error) {
     console.error('❌ API connection check failed:', error);
     return {

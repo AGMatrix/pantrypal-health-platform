@@ -68,27 +68,37 @@ const dishImageMap: Record<string, string> = {
 };
 
 export function parseRecipeResponse(aiResponse: string): Recipe[] {
-  console.log('🔍 Parsing AI response:', aiResponse.substring(0, 200) + '...');
+  console.log('🔍 Parsing AI response:', aiResponse.substring(0, 300) + '...');
   
   try {
     const recipes: Recipe[] = [];
     
-    // Split response into individual recipes
+    // Enhanced recipe splitting with multiple strategies
     const recipeBlocks = splitIntoRecipeBlocks(aiResponse);
+    console.log(`📦 Found ${recipeBlocks.length} potential recipe blocks`);
     
     recipeBlocks.forEach((block, index) => {
       try {
+        console.log(`🔍 Parsing block ${index + 1}:`, block.substring(0, 100) + '...');
         const parsedData = parseRecipeBlock(block);
+        
         if (parsedData && parsedData.title && parsedData.ingredients.length > 0) {
           const recipe = convertToRecipeObject(parsedData, index);
           recipes.push(recipe);
+          console.log(`✅ Successfully parsed recipe: "${recipe.title}"`);
+        } else {
+          console.warn(`⚠️ Block ${index + 1} failed validation:`, {
+            hasTitle: !!parsedData?.title,
+            ingredientCount: parsedData?.ingredients?.length || 0,
+            instructionCount: parsedData?.instructions?.length || 0
+          });
         }
       } catch (error) {
-        console.warn(`Failed to parse recipe block ${index}:`, error);
+        console.warn(`❌ Failed to parse recipe block ${index + 1}:`, error);
       }
     });
     
-    console.log('✅ Successfully parsed', recipes.length, 'recipes with realistic pricing');
+    console.log(`✅ Successfully parsed ${recipes.length} total recipes with realistic pricing`);
     return recipes;
     
   } catch (error) {
@@ -98,43 +108,82 @@ export function parseRecipeResponse(aiResponse: string): Recipe[] {
 }
 
 function splitIntoRecipeBlocks(response: string): string[] {
-  // Split by common recipe separators
+  console.log('🔍 Splitting response into recipe blocks...');
+  
+  // Enhanced recipe separators
   const separators = [
     /\*\*Recipe \d+:/gi,
     /Recipe \d+:/gi,
-    /\d+\.\s*\*\*[^*]+\*\*/gi,
+    /\*\*\d+\.\s*[^*\n]+\*\*/gi,
     /#{1,3}\s*Recipe/gi,
-    /#{1,3}\s*\d+\./gi
+    /#{1,3}\s*\d+\./gi,
+    /\n\s*\d+\.\s*[A-Z][^.\n]{10,}/g, // "1. Recipe Name" format
+    /\n\s*[A-Z][^.\n]{15,}:\s*\n/g  // "Recipe Name:" format
   ];
   
   let blocks: string[] = [];
   
   // Try different splitting patterns
   for (const separator of separators) {
-    const splits = response.split(separator);
-    if (splits.length > 1) {
-      // Remove empty first element and add back separators
-      blocks = splits.slice(1).map((block, index) => {
-        const match = response.match(separator);
-        const prefix = match ? match[index] || '' : '';
-        return prefix + block;
+    const matches = Array.from(response.matchAll(separator));
+    if (matches.length > 0) {
+      console.log(`📍 Found ${matches.length} matches with separator:`, separator);
+      
+      blocks = [];
+      let lastIndex = 0;
+      
+      matches.forEach((match, i) => {
+        if (i > 0) {
+          // Extract the block between previous match and current match
+          const blockStart = lastIndex;
+          const blockEnd = match.index || response.length;
+          const block = response.substring(blockStart, blockEnd).trim();
+          if (block.length > 50) {
+            blocks.push(block);
+          }
+        }
+        lastIndex = match.index || 0;
       });
-      break;
+      
+      // Add the last block
+      const lastBlock = response.substring(lastIndex).trim();
+      if (lastBlock.length > 50) {
+        blocks.push(lastBlock);
+      }
+      
+      if (blocks.length > 1) break; // Found a good splitting pattern
     }
   }
   
-  // Fallback: split by double newlines if no clear separators
+  // Fallback strategies
+  if (blocks.length <= 1) {
+    console.log('🔄 Using fallback splitting strategies...');
+    
+    // Try splitting by double newlines with recipe keywords
+    const paragraphs = response.split(/\n\s*\n/).filter(p => p.trim().length > 50);
+    const recipeKeywords = ['ingredient', 'instruction', 'cook', 'recipe', 'serve'];
+    
+    blocks = paragraphs.filter(paragraph => {
+      const lower = paragraph.toLowerCase();
+      return recipeKeywords.some(keyword => lower.includes(keyword)) &&
+             (lower.includes('cup') || lower.includes('tbsp') || lower.includes('tsp') || lower.includes('lb'));
+    });
+    
+    console.log(`📦 Fallback found ${blocks.length} potential recipe blocks`);
+  }
+  
+  // If still no blocks, try to treat the entire response as one recipe
   if (blocks.length === 0) {
-    blocks = response.split(/\n\s*\n/).filter(block => 
-      block.trim().length > 50 && 
-      (block.includes('ingredient') || block.includes('recipe') || block.includes('cook'))
-    );
+    console.log('🔄 Treating entire response as single recipe');
+    blocks = [response];
   }
   
   return blocks.filter(block => block.trim().length > 0);
 }
 
 function parseRecipeBlock(block: string): ParsedRecipeData | null {
+  console.log('🔍 Parsing individual recipe block...');
+  
   const lines = block.split('\n').map(line => line.trim()).filter(line => line.length > 0);
   
   const data: ParsedRecipeData = {
@@ -151,28 +200,51 @@ function parseRecipeBlock(block: string): ParsedRecipeData | null {
     const line = lines[i];
     const lowerLine = line.toLowerCase();
     
-    // Extract title
-    if (!data.title && (line.includes('**') || line.includes('#') || i === 0)) {
-      data.title = extractTitle(line);
-      continue;
+    // Extract title (more flexible patterns)
+    if (!data.title) {
+      if (line.includes('**') || line.includes('#') || i === 0 || 
+          /^[A-Z][^.]{10,}$/.test(line) || 
+          /recipe \d+:/i.test(line)) {
+        data.title = extractTitle(line);
+        if (data.title) {
+          console.log(`📝 Found title: "${data.title}"`);
+          continue;
+        }
+      }
     }
     
-    // Detect sections
-    if (lowerLine.includes('ingredient')) {
+    // Enhanced section detection
+    if (lowerLine.includes('ingredient') || lowerLine.includes('what you need') || lowerLine.includes('you\'ll need')) {
       currentSection = 'ingredients';
+      console.log('🥕 Switched to ingredients section');
       continue;
-    } else if (lowerLine.includes('instruction') || lowerLine.includes('directions') || lowerLine.includes('steps')) {
+    } else if (lowerLine.includes('instruction') || lowerLine.includes('directions') || 
+               lowerLine.includes('steps') || lowerLine.includes('method') || 
+               lowerLine.includes('how to make') || lowerLine.includes('preparation')) {
       currentSection = 'instructions';
       instructionCounter = 0;
+      console.log('👨‍🍳 Switched to instructions section');
       continue;
-    } else if (lowerLine.includes('cooking time') || lowerLine.includes('prep time')) {
+    } else if (lowerLine.includes('cooking time') || lowerLine.includes('prep time') || 
+               lowerLine.includes('total time')) {
       data.cookingTime = extractTime(line);
+      console.log(`⏱️ Found cooking time: ${data.cookingTime} minutes`);
       continue;
-    } else if (lowerLine.includes('serving')) {
+    } else if (lowerLine.includes('serving') || lowerLine.includes('yield') || lowerLine.includes('makes')) {
       data.servings = extractServings(line);
+      console.log(`🍽️ Found servings: ${data.servings}`);
       continue;
-    } else if (lowerLine.includes('difficulty')) {
+    } else if (lowerLine.includes('difficulty') || lowerLine.includes('skill level')) {
       data.difficulty = extractDifficulty(line);
+      console.log(`📊 Found difficulty: ${data.difficulty}`);
+      continue;
+    } else if (lowerLine.includes('cuisine') || lowerLine.includes('style')) {
+      data.cuisine = extractCuisine(line);
+      console.log(`🌍 Found cuisine: ${data.cuisine}`);
+      continue;
+    } else if (lowerLine.includes('description') || (i === 1 && data.title && line.length > 20 && line.length < 200)) {
+      data.description = extractDescription(line);
+      console.log(`📖 Found description: ${data.description?.substring(0, 50)}...`);
       continue;
     }
     
@@ -190,52 +262,99 @@ function parseRecipeBlock(block: string): ParsedRecipeData | null {
     }
   }
   
-  // Extract additional metadata
-  data.cuisine = extractCuisine(block);
+  // Extract additional metadata from the entire block
+  if (!data.cuisine) {
+    data.cuisine = extractCuisine(block);
+  }
   data.dietary = extractDietary(block);
-  data.description = extractDescription(block);
   
-  return data.title && data.ingredients.length > 0 ? data : null;
+  // Validation
+  const isValid = data.title && data.ingredients.length > 0;
+  console.log(`✅ Recipe validation:`, {
+    title: data.title,
+    ingredients: data.ingredients.length,
+    instructions: data.instructions.length,
+    valid: isValid
+  });
+  
+  return isValid ? data : null;
 }
 
 function extractTitle(line: string): string {
   // Remove markdown formatting and numbering
-  return line
+  let title = line
     .replace(/^\*\*|\*\*$/g, '')
     .replace(/^#+\s*/, '')
     .replace(/^Recipe \d+:\s*/i, '')
     .replace(/^\d+\.\s*/, '')
+    .replace(/^-\s*/, '')
     .trim();
+  
+  // If title has a colon, take the part after it
+  if (title.includes(':')) {
+    const parts = title.split(':');
+    if (parts.length > 1 && parts[1].trim().length > 0) {
+      title = parts[1].trim();
+    }
+  }
+  
+  return title;
 }
 
 function extractTime(line: string): number | undefined {
-  const timeMatch = line.match(/(\d+)\s*(minute|min|hour|hr)/i);
-  if (timeMatch) {
-    const time = parseInt(timeMatch[1]);
-    const unit = timeMatch[2].toLowerCase();
-    return unit.includes('hour') ? time * 60 : time;
+  const timePatterns = [
+    /(\d+)\s*(minute|min|hour|hr)s?/i,
+    /(\d+)\s*-\s*(\d+)\s*(minute|min|hour|hr)s?/i,
+    /prep:\s*(\d+)\s*(minute|min|hour|hr)s?/i,
+    /cook:\s*(\d+)\s*(minute|min|hour|hr)s?/i,
+    /total:\s*(\d+)\s*(minute|min|hour|hr)s?/i
+  ];
+  
+  for (const pattern of timePatterns) {
+    const match = line.match(pattern);
+    if (match) {
+      const time = parseInt(match[1]);
+      const unit = match[2] || match[4];
+      if (unit && unit.toLowerCase().includes('hour')) {
+        return time * 60;
+      }
+      return time;
+    }
   }
   return undefined;
 }
 
 function extractServings(line: string): number | undefined {
-  const servingMatch = line.match(/(\d+)\s*(serving|portion)/i);
-  return servingMatch ? parseInt(servingMatch[1]) : undefined;
+  const servingPatterns = [
+    /(\d+)\s*(serving|portion|people|person)/i,
+    /serves?\s*(\d+)/i,
+    /makes?\s*(\d+)/i,
+    /yield:?\s*(\d+)/i
+  ];
+  
+  for (const pattern of servingPatterns) {
+    const match = line.match(pattern);
+    if (match) {
+      return parseInt(match[1]);
+    }
+  }
+  return undefined;
 }
 
 function extractDifficulty(line: string): 'Easy' | 'Medium' | 'Hard' | undefined {
   const lowerLine = line.toLowerCase();
-  if (lowerLine.includes('easy') || lowerLine.includes('simple')) return 'Easy';
-  if (lowerLine.includes('medium') || lowerLine.includes('intermediate')) return 'Medium';
-  if (lowerLine.includes('hard') || lowerLine.includes('difficult') || lowerLine.includes('advanced')) return 'Hard';
+  if (lowerLine.includes('easy') || lowerLine.includes('simple') || lowerLine.includes('beginner')) return 'Easy';
+  if (lowerLine.includes('medium') || lowerLine.includes('intermediate') || lowerLine.includes('moderate')) return 'Medium';
+  if (lowerLine.includes('hard') || lowerLine.includes('difficult') || lowerLine.includes('advanced') || lowerLine.includes('expert')) return 'Hard';
   return undefined;
 }
 
-function extractCuisine(block: string): string | undefined {
-  const cuisines = ['italian', 'mexican', 'asian', 'chinese', 'indian', 'mediterranean', 'french', 'thai', 'american', 'japanese'];
-  const lowerBlock = block.toLowerCase();
+function extractCuisine(text: string): string | undefined {
+  const cuisines = ['italian', 'mexican', 'asian', 'chinese', 'indian', 'mediterranean', 'french', 'thai', 'american', 'japanese', 'korean', 'middle eastern', 'greek'];
+  const lowerText = text.toLowerCase();
   
-  return cuisines.find(cuisine => lowerBlock.includes(cuisine));
+  const found = cuisines.find(cuisine => lowerText.includes(cuisine));
+  return found ? found.charAt(0).toUpperCase() + found.slice(1) : undefined;
 }
 
 function extractDietary(block: string): string[] {
@@ -246,25 +365,23 @@ function extractDietary(block: string): string[] {
   if (lowerBlock.includes('vegan')) dietary.push('vegan');
   if (lowerBlock.includes('gluten-free') || lowerBlock.includes('gluten free')) dietary.push('gluten-free');
   if (lowerBlock.includes('dairy-free') || lowerBlock.includes('dairy free')) dietary.push('dairy-free');
-  if (lowerBlock.includes('low-carb') || lowerBlock.includes('low carb')) dietary.push('low-carb');
+  if (lowerBlock.includes('low-carb') || lowerBlock.includes('low carb') || lowerBlock.includes('keto')) dietary.push('low-carb');
   if (lowerBlock.includes('high-protein') || lowerBlock.includes('high protein')) dietary.push('high-protein');
+  if (lowerBlock.includes('healthy') || lowerBlock.includes('nutritious')) dietary.push('healthy');
   
   return dietary;
 }
 
-function extractDescription(block: string): string | undefined {
-  // Look for description-like sentences
-  const lines = block.split('\n');
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.length > 20 && 
-        trimmed.length < 200 && 
-        !trimmed.includes(':') && 
-        !isIngredientLine(trimmed) && 
-        !isInstructionLine(trimmed) &&
-        (trimmed.includes('delicious') || trimmed.includes('perfect') || trimmed.includes('recipe'))) {
-      return trimmed.replace(/^[-*]\s*/, '');
-    }
+function extractDescription(text: string): string | undefined {
+  // Clean up the description text
+  let description = text
+    .replace(/^\*\*Description:\*\*\s*/i, '')
+    .replace(/^Description:\s*/i, '')
+    .replace(/^-\s*/, '')
+    .trim();
+  
+  if (description.length > 10 && description.length < 300) {
+    return description;
   }
   return undefined;
 }
@@ -273,12 +390,15 @@ function isIngredientLine(line: string): boolean {
   const trimmed = line.trim();
   if (trimmed.length < 3) return false;
   
-  // Check for ingredient patterns
+  // Enhanced ingredient patterns
   const ingredientPatterns = [
-    /^\d+\s*(cup|tbsp|tsp|lb|oz|gram|kg|piece|clove|inch)/i,
+    /^\d+\s*(cup|tbsp|tsp|lb|oz|gram|kg|piece|clove|inch|slice|can|bottle)/i,
     /^[-*•]\s*\d/,
     /^[-*•]\s*[a-zA-Z]/,
-    /\d+\s*(cup|tbsp|tsp|lb|oz|gram|kg|piece|clove)/i
+    /\d+\s*(cup|tbsp|tsp|lb|oz|gram|kg|piece|clove|slice|can|bottle)/i,
+    /^(a|an|one|two|three|four|five)\s+(cup|tbsp|tsp|lb|oz|piece|clove)/i,
+    /^\d+\/\d+\s*(cup|tbsp|tsp)/i,
+    /^(½|¼|¾|⅓|⅔|⅛|⅜|⅝|⅞)\s*(cup|tbsp|tsp)/i
   ];
   
   return ingredientPatterns.some(pattern => pattern.test(trimmed));
@@ -288,15 +408,16 @@ function isInstructionLine(line: string): boolean {
   const trimmed = line.trim();
   if (trimmed.length < 5) return false;
   
-  // Check for instruction patterns
+  // Enhanced instruction patterns
   const instructionPatterns = [
     /^\d+\.\s*/,
     /^[-*•]\s*/,
-    /^(heat|cook|add|mix|stir|combine|place|cut|chop)/i
+    /^(heat|cook|add|mix|stir|combine|place|cut|chop|dice|slice|sauté|simmer|boil|bake|fry|grill|roast|season|serve|garnish|remove|drain|whisk|blend|fold|pour)/i,
+    /^(in a|using a|with a|on a|over|under|until|when|while|after|before)/i
   ];
   
   return instructionPatterns.some(pattern => pattern.test(trimmed)) ||
-         (trimmed.includes('.') && trimmed.length > 10);
+         (trimmed.includes('.') && trimmed.length > 15);
 }
 
 function cleanIngredientLine(line: string): string | null {
@@ -317,6 +438,11 @@ function cleanInstructionLine(line: string, stepNumber: number): string | null {
   // Ensure instruction starts with capital letter
   if (cleaned.length > 0) {
     cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }
+  
+  // Add period if missing
+  if (cleaned.length > 0 && !cleaned.endsWith('.') && !cleaned.endsWith('!') && !cleaned.endsWith('?')) {
+    cleaned += '.';
   }
   
   return cleaned.length > 3 ? cleaned : null;
@@ -359,7 +485,7 @@ function convertToRecipeObject(data: ParsedRecipeData, index: number): Recipe {
   const recipe: Recipe = {
     id: `ai-recipe-${Date.now()}-${index}`,
     title: data.title,
-    description: data.description || `A delicious ${cuisineCapitalized.toLowerCase()} recipe`,
+    description: data.description || `A delicious ${data.cuisine || 'homestyle'} recipe with great flavors`,
     ingredients,
     instructions: data.instructions,
     cookingTime: data.cookingTime || 30,
@@ -394,7 +520,9 @@ function parseIngredientText(text: string): { name: string; amount: number; unit
     // "2 medium onions" or "3 large eggs"
     /^(\d+(?:\.\d+)?)\s+(small|medium|large|whole|each)\s+(.+)/i,
     // "1/2 of an onion" or "a pinch of salt"
-    /^(a\s+pinch|pinch|a\s+dash|dash|a\s+handful|handful|\d+\/\d+)\s+(?:of\s+)?(.+)/i
+    /^(a\s+pinch|pinch|a\s+dash|dash|a\s+handful|handful|\d+\/\d+)\s+(?:of\s+)?(.+)/i,
+    // "½ cup flour" - Unicode fractions
+    /^(½|¼|¾|⅓|⅔|⅛|⅜|⅝|⅞)\s*(cup|tbsp|tsp|lb|oz)s?\s+(.+)/i
   ];
 
   for (const pattern of patterns) {
@@ -413,6 +541,24 @@ function parseIngredientText(text: string): { name: string; amount: number; unit
       } else if (amountStr.includes('handful')) {
         amount = 0.5;
         unit = 'cup';
+      } else if (amountStr === '½') {
+        amount = 0.5;
+      } else if (amountStr === '¼') {
+        amount = 0.25;
+      } else if (amountStr === '¾') {
+        amount = 0.75;
+      } else if (amountStr === '⅓') {
+        amount = 0.33;
+      } else if (amountStr === '⅔') {
+        amount = 0.67;
+      } else if (amountStr === '⅛') {
+        amount = 0.125;
+      } else if (amountStr === '⅜') {
+        amount = 0.375;
+      } else if (amountStr === '⅝') {
+        amount = 0.625;
+      } else if (amountStr === '⅞') {
+        amount = 0.875;
       } else {
         amount = parseFloat(amountStr) || 1;
       }
