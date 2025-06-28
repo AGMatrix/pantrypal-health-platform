@@ -1,6 +1,8 @@
 // src/lib/responsive.ts
 // Responsive design utilities and breakpoint system
 
+import { useState, useEffect } from 'react';
+
 export const breakpoints = {
     xs: '320px',   // Small phones
     sm: '640px',   // Large phones
@@ -72,9 +74,9 @@ export const breakpoints = {
   
   // Responsive hook for React components
   export const useResponsive = () => {
-    const [device, setDevice] = React.useState<'mobile' | 'tablet' | 'desktop'>('desktop');
+    const [device, setDevice] = useState<'mobile' | 'tablet' | 'desktop'>('desktop');
     
-    React.useEffect(() => {
+    useEffect(() => {
       const handleResize = () => {
         const width = window.innerWidth;
         if (width < 768) setDevice('mobile');
