@@ -668,7 +668,8 @@ function createEnhancedStructuredPlan(params: DietPlanParams): Omit<GeneratedDie
   const isDairyFree = params.dietaryPreferences.some(p => p.toLowerCase().includes('dairy')) || 
                      params.allergens.some(a => a.toLowerCase().includes('dairy'));
 
-  const plan = {
+  // Create base plan object
+  const basePlan = {
     restrictions: generateEnhancedRestrictions({ 
       hasHypertension, 
       hasDiabetes, 
@@ -737,12 +738,15 @@ function createEnhancedStructuredPlan(params: DietPlanParams): Omit<GeneratedDie
     })
   };
 
-  // Add rare condition integration if applicable
+  // Add rare condition integration if applicable and return with proper typing
   if (params.rareConditionAnalysis && params.rareConditionAnalysis.length > 0) {
-    plan.rareConditionIntegration = createRareConditionIntegration(params.rareConditionAnalysis, plan);
+    return {
+      ...basePlan,
+      rareConditionIntegration: createRareConditionIntegration(params.rareConditionAnalysis, basePlan)
+    };
   }
 
-  return plan;
+  return basePlan;
 }
 
 // Enhanced generation functions with rare condition support
