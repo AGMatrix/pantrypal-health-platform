@@ -4,7 +4,14 @@ import { NextRequest } from 'next/server';
 import { supabase } from '@/lib/database';
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend with proper error handling
+const getResendClient = () => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('RESEND_API_KEY environment variable is not set');
+  }
+  return new Resend(apiKey);
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -88,6 +95,18 @@ export async function POST(request: NextRequest) {
     const resetLink = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
     console.log('📧 Sending reset email to:', email);
+
+    // Initialize Resend client only when needed
+    let resend: Resend;
+    try {
+      resend = getResendClient();
+    } catch (error) {
+      console.error('❌ Failed to initialize Resend client:', error);
+      return Response.json(
+        { success: false, error: 'Email service unavailable. Please try again later.' },
+        { status: 500 }
+      );
+    }
 
     // Send email using Resend
     const { data, error } = await resend.emails.send({
