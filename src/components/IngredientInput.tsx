@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { useState, KeyboardEvent } from 'react';
+import React, { useState, KeyboardEvent, useEffect } from 'react';
 import { X, Plus, Sparkles, ChefHat, Search } from 'lucide-react';
 
 interface IngredientInputProps {
@@ -19,12 +19,21 @@ export default function IngredientInput({
   const [inputValue, setInputValue] = useState('');
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [showAllSuggestions, setShowAllSuggestions] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  // Ensure we're on the client side before using window
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   // Vegetable emojis for decoration
   const veggieEmojis = ['🥕', '🥬', '🍅', '🥒', '🌽', '🥔', '🧄', '🧅', '🥦', '🫑', '🍆', '🥑'];
   
   // Generate random positions for floating vegetables (fewer on mobile)
   const generateFloatingVeggies = () => {
+    // Only generate after client-side hydration
+    if (!isClient) return [];
+    
     const count = window.innerWidth < 768 ? 6 : 12; // Fewer on mobile for performance
     return Array.from({ length: count }, (_, i) => ({
       id: i,
@@ -37,7 +46,14 @@ export default function IngredientInput({
     }));
   };
 
-  const [floatingVeggies] = useState(generateFloatingVeggies());
+  const [floatingVeggies, setFloatingVeggies] = useState<any[]>([]);
+
+  // Generate floating veggies after client-side hydration
+  useEffect(() => {
+    if (isClient) {
+      setFloatingVeggies(generateFloatingVeggies());
+    }
+  }, [isClient]);
 
   const addIngredient = () => {
     const trimmedValue = inputValue.trim().toLowerCase();
@@ -84,6 +100,11 @@ export default function IngredientInput({
 
   // Show limited suggestions on mobile, more on larger screens
   const getSuggestionsToShow = () => {
+    // Default values for SSR
+    if (!isClient) {
+      return availableIngredients.slice(0, 12);
+    }
+
     const maxMobile = 12;
     const maxTablet = 18;
     const maxDesktop = 24;
@@ -113,24 +134,26 @@ export default function IngredientInput({
         }
       `}>
         {/* Floating Vegetables Background - Responsive */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {floatingVeggies.map((veggie) => (
-            <div
-              key={veggie.id}
-              className="absolute opacity-60 sm:opacity-100 transition-all duration-1000"
-              style={{
-                left: `${veggie.x}%`,
-                top: `${veggie.y}%`,
-                transform: `rotate(${veggie.rotation}deg) scale(${veggie.size})`,
-                animationDelay: `${veggie.delay}s`
-              }}
-            >
-              <div className="text-lg sm:text-2xl animate-pulse">
-                {veggie.emoji}
+        {isClient && (
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {floatingVeggies.map((veggie) => (
+              <div
+                key={veggie.id}
+                className="absolute opacity-60 sm:opacity-100 transition-all duration-1000"
+                style={{
+                  left: `${veggie.x}%`,
+                  top: `${veggie.y}%`,
+                  transform: `rotate(${veggie.rotation}deg) scale(${veggie.size})`,
+                  animationDelay: `${veggie.delay}s`
+                }}
+              >
+                <div className="text-lg sm:text-2xl animate-pulse">
+                  {veggie.emoji}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Header Section - Responsive */}
         <div className="relative z-10 p-4 sm:p-6 pb-3 sm:pb-4">
@@ -279,7 +302,7 @@ export default function IngredientInput({
                 </div>
 
                 {/* Show More/Less Button */}
-                {hasMoreSuggestions && (
+                {hasMoreSuggestions && isClient && (
                   <div className="text-center">
                     <button
                       onClick={() => setShowAllSuggestions(!showAllSuggestions)}

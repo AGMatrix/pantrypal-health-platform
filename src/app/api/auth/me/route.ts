@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
 import { supabase } from '@/lib/database';
 
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 Checking user session...');

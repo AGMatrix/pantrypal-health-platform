@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 
+export const dynamic = 'force-dynamic';
 const substitutionDatabase: Record<string, string[]> = {
   'butter': ['margarine', 'coconut oil', 'olive oil', 'vegetable oil', 'applesauce (for baking)'],
   'milk': ['almond milk', 'soy milk', 'oat milk', 'coconut milk', 'rice milk'],

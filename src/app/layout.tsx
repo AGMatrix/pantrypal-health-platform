@@ -9,6 +9,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://pantrypal-health-platform.vercel.app'),
   title: 'PantryPal - AI Recipe & Health Platform',
   description: 'Discover personalized recipes with AI-powered recommendations based on your health conditions and dietary preferences',
   keywords: 'recipes, AI, health, diet, cooking, meal planning, nutrition',
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'PantryPal - AI Recipe & Health Platform',
     description: 'Discover personalized recipes with AI-powered recommendations',
-    url: 'https://pantrypal-health-platform.vercel.app',
+    url: '/',
     siteName: 'PantryPal',
     locale: 'en_US',
     type: 'website',
