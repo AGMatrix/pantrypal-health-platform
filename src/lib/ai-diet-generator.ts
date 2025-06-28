@@ -120,9 +120,9 @@ export async function generateDietPlanWithAI(params: DietPlanParams): Promise<Di
 
     // Always ensure rareConditionAnalysis is either undefined or an array
     let enhancedRareAnalysis = validParams.rareConditionAnalysis;
-    if (conditionAnalysis.needsRareAnalysis && conditionAnalysis.rareConditions.length > 0) {
-      console.log('🧬 Processing rare conditions:', conditionAnalysis.rareConditions);
-      enhancedRareAnalysis = await processRareConditions(validParams, conditionAnalysis.rareConditions);
+    if (conditionAnalysis.needsRareAnalysis && conditionAnalysis.rare.length > 0) {
+      console.log('🧬 Processing rare conditions:', conditionAnalysis.rare);
+      enhancedRareAnalysis = await processRareConditions(validParams, conditionAnalysis.rare);
     }
 
     // Step 3: Generate diet plan with enhanced rare condition data

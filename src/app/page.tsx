@@ -1310,45 +1310,6 @@ export default function RecipeSearchPage() {
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 via-white to-violet-50">
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed top-4 left-4 z-50 bg-red-500 text-white p-4 rounded-lg max-w-xs text-xs">
-          <h3 className="font-bold mb-2">DEBUG PANEL</h3>
-          <div className="space-y-1">
-            <div>User: {user?.email || 'None'}</div>
-            <div>AuthContext Favorites: {userData?.favorites?.length || 0}</div>
-            <div>Page Favorites: {favorites.length}</div>
-            <div>Safe Count: {safeFavoritesCount}</div>
-            <div>LocalStorage userEmail: {typeof window !== 'undefined' ? localStorage.getItem('userEmail') : 'N/A'}</div>
-          </div>
-          <div className="flex gap-1 mt-2">
-            <button
-              onClick={() => {
-                console.log('🧹 EMERGENCY CLEAR - Clearing all favorites data');
-                setFavorites([]);
-                if (updateUserData) {
-                  updateUserData({ favorites: [] });
-                }
-                localStorage.removeItem('userEmail');
-                localStorage.removeItem('userSession');
-                localStorage.removeItem('userName');
-              }}
-              className="bg-red-700 px-2 py-1 rounded text-xs"
-            >
-              Clear All
-            </button>
-            <button
-              onClick={() => {
-                console.log('🔄 FORCE RELOAD - Reloading favorites');
-                loadFavorites();
-              }}
-              className="bg-blue-700 px-2 py-1 rounded text-xs"
-            >
-              Reload
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Top Navigation with gradient */}
       <TopNavigation
         onShowFavorites={handleShowFavorites} // Use safe function
@@ -1463,7 +1424,7 @@ export default function RecipeSearchPage() {
 
         {/* Enhanced Search Section with glassmorphism */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Ingredients Input with beautiful styling */}
+          {/* Ingredients Input */}
           <div className="group relative ingredient-input">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
             <div className="relative bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl border border-white/20 p-8 hover:shadow-2xl transition-all duration-300">
