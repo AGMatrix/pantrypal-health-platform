@@ -2,13 +2,42 @@
 // Manual setup endpoint to create the favorites table
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase';
+
+// Dynamic function to create Supabase client only when needed
+function createSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  
+  if (!supabaseUrl) {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable');
+  }
+  
+  if (!supabaseKey) {
+    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable');
+  }
+  
+  // Import createClient dynamically to avoid build-time issues
+  const { createClient } = require('@supabase/supabase-js');
+  return createClient(supabaseUrl, supabaseKey);
+}
 
 export async function POST(request: NextRequest) {
   try {
     console.log('🛠️ Manual favorites table setup started');
     
-    const supabase = createSupabaseServerClient();
+    // Create Supabase client only when the function is called
+    let supabase;
+    try {
+      supabase = createSupabaseClient();
+    } catch (error) {
+      console.error('❌ Failed to create Supabase client:', error);
+      return NextResponse.json({
+        success: false,
+        step: 'client_initialization',
+        error: 'Failed to initialize Supabase client',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
     
     // Define SQL statements at the top level
     const createTableSQL = `
