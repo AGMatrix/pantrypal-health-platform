@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     const resetBaseUrl = baseUrl || (
       process.env.NODE_ENV === 'development' 
         ? 'http://localhost:3000' 
-        : 'https://your-production-domain.com'
+        : 'https://pantrypal.in'
     );
 
     // Create reset link with debugging
