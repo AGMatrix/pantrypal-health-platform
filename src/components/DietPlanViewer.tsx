@@ -29,9 +29,10 @@ interface DietPlanViewerProps {
   onClose: () => void;
   onEdit?: () => void;
   userId?: string;
+  dietPlanData?: any;
 }
 
-export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: DietPlanViewerProps) {
+export default function DietPlanViewer({ isOpen, onClose, onEdit, userId,  dietPlanData }: DietPlanViewerProps) {
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedDay, setSelectedDay] = useState('Day 1');
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
@@ -42,17 +43,40 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
 
   // Fetch diet plan when modal opens
   useEffect(() => {
+    console.log('=== DIET PLAN VIEWER DEBUG START ===');
+    console.log('isOpen:', isOpen);
+    console.log('dietPlanData provided:', !!dietPlanData);
+    console.log('userId:', userId);
+    
     if (isOpen) {
-      fetchDietPlan();
+      if (dietPlanData) {
+        console.log('Using direct diet plan data');
+        console.log('Diet plan data type:', typeof dietPlanData);
+        console.log('Diet plan data keys:', Object.keys(dietPlanData || {}));
+        console.log('Diet plan data structure:', dietPlanData);
+        
+        setDietPlan(dietPlanData);
+        setIsLoading(false);
+        setError(null);
+        
+        console.log('Set dietPlan state with direct data');
+      } else {
+        console.log('No direct data provided, fetching from API...');
+        fetchDietPlan();
+      }
+    } else {
+      console.log('Modal not open, skipping data loading');
     }
-  }, [isOpen, userId]);
+    console.log('=== DIET PLAN VIEWER DEBUG END ===');
+  }, [isOpen, userId, dietPlanData]);
 
   const fetchDietPlan = async () => {
+    console.log('=== FETCHING DIET PLAN FROM API ===');
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('🔍 Fetching diet plan for user:', userId);
+      console.log('Fetching diet plan for user:', userId);
       
       const response = await fetch('/api/health/diet-plan', {
         method: 'GET',
@@ -62,31 +86,40 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
         }
       });
 
-      console.log('📥 Diet plan response status:', response.status);
+      console.log('Diet plan fetch response status:', response.status);
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch diet plan: ${response.status}`);
+        const errorText = await response.text();
+        console.error('API fetch error:', errorText);
+        throw new Error(`Failed to fetch diet plan: ${response.status} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('📋 Diet plan result:', result);
+      console.log('Diet plan fetch result:', result);
 
       if (result.success && result.data) {
         setDietPlan(result.data);
-        console.log('✅ Diet plan loaded successfully');
+        console.log('Diet plan loaded successfully from API');
       } else {
         setDietPlan(null);
-        console.log('ℹ️ No active diet plan found');
+        console.log('No active diet plan found from API');
       }
 
     } catch (error) {
-      console.error('❌ Failed to fetch diet plan:', error);
+      console.error('Failed to fetch diet plan:', error);
       setError(error instanceof Error ? error.message : 'Failed to load diet plan');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Early return if not open
+  if (!isOpen) {
+    return null;
+  }
+
+
+  
   const toggleShoppingItem = (itemKey: string) => {
     setCheckedItems(prev => ({
       ...prev,
@@ -111,12 +144,11 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
     URL.revokeObjectURL(url);
   };
 
-  if (!isOpen) return null;
 
   // Loading state
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
         <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center max-w-md w-full">
           <Loader2 className="w-12 h-12 sm:w-16 sm:h-16 text-blue-600 mx-auto mb-4 animate-spin" />
           <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Loading Your Diet Plan</h3>
@@ -129,7 +161,7 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
   // Error state
   if (error) {
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
         <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center max-w-md w-full">
           <AlertTriangle className="w-12 h-12 sm:w-16 sm:h-16 text-red-500 mx-auto mb-4" />
           <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">Error Loading Diet Plan</h3>
@@ -156,7 +188,7 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
   // No diet plan state
   if (!dietPlan) {
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
         <div className="bg-white rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center max-w-md w-full">
           <Brain className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">No Diet Plan Found</h3>
@@ -183,7 +215,7 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
     );
   }
 
-  const mealPlanDays = dietPlan.mealPlan?.dailyMeals ? Object.keys(dietPlan.mealPlan.dailyMeals) : [];
+  const mealPlanDays = dietPlan?.mealPlan?.dailyMeals ? Object.keys(dietPlan.mealPlan.dailyMeals) : [];
   const currentDayIndex = mealPlanDays.findIndex(day => day === selectedDay);
 
   const nextDay = () => {
@@ -206,8 +238,18 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
-      <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-6xl h-full sm:h-auto sm:max-h-[95vh] overflow-hidden flex flex-col">
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] flex items-center justify-center p-0 sm:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className="bg-white w-full h-full sm:w-full sm:max-w-6xl sm:h-auto sm:max-h-[95vh] sm:rounded-3xl overflow-hidden flex flex-col shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Mobile handle */}
         <div className="sm:hidden flex justify-center py-3 bg-gray-50">
@@ -225,7 +267,7 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
                 Your Diet Plan
               </h2>
               <p className="text-xs sm:text-sm text-gray-600 truncate">
-                Generated {new Date(dietPlan.metadata?.timestamp || Date.now()).toLocaleDateString()}
+                Generated {new Date(dietPlan?.metadata?.timestamp || Date.now()).toLocaleDateString()}
               </p>
             </div>
           </div>
@@ -336,27 +378,89 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
         </div>
 
         {/* Content Area - Responsive */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 min-h-0">
+          
+          {/* Active Tab Indicator */}
+          <div className="mb-4 sm:mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 capitalize">
+                  {activeTab === 'overview' ? 'Plan Overview' : 
+                   activeTab === 'meals' ? 'Meal Plan' :
+                   activeTab === 'shopping' ? 'Shopping List' :
+                   activeTab === 'guidelines' ? 'Guidelines' : 'Tips & Notes'}
+                </h3>
+              </div>
+              <div className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                Currently Viewing
+              </div>
+            </div>
+          </div>
           
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="space-y-4 sm:space-y-6">
+              
+              {/* Welcome Message */}
+              <div className="bg-gradient-to-r from-emerald-50 via-blue-50 to-purple-50 border-2 border-emerald-200 rounded-2xl p-6 sm:p-8 text-center">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="p-3 bg-gradient-to-r from-emerald-500 to-blue-500 rounded-full shadow-lg">
+                    <Heart className="w-8 h-8 text-white" />
+                  </div>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
+                  🎉 Your Personalized Diet Plan is Ready!
+                </h2>
+                <p className="text-lg text-gray-700 mb-4">
+                  Welcome to your custom nutrition journey. This plan has been tailored specifically for your health needs and preferences.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2 text-sm mb-6">
+                  <span className="px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full">✅ Personalized</span>
+                  <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full">🤖 AI-Generated</span>
+                  <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full">🏥 Health-Focused</span>
+                </div>
+                
+                {/* Quick Navigation */}
+                <div className="flex flex-wrap justify-center gap-3">
+                  <button
+                    onClick={() => setActiveTab('meals')}
+                    className="px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 transition-all duration-200 font-medium flex items-center gap-2 shadow-lg hover:shadow-xl"
+                  >
+                    <Utensils className="w-4 h-4" />
+                    View Meals
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('shopping')}
+                    className="px-4 py-2 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-xl hover:from-green-600 hover:to-teal-600 transition-all duration-200 font-medium flex items-center gap-2 shadow-lg hover:shadow-xl"
+                  >
+                    <ShoppingCart className="w-4 h-4" />
+                    Shopping List
+                  </button>
+                </div>
+              </div>
+              
               {/* Plan Summary */}
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl sm:rounded-2xl p-4 sm:p-6">
-                <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-3">Plan Overview</h3>
-                <MarkdownText className="text-gray-700 text-sm sm:text-base">
-                  {dietPlan.overview || 'Your personalized diet plan has been created based on your health profile and preferences.'}
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl sm:rounded-2xl p-6 sm:p-8">
+                <h3 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4 flex items-center gap-3">
+                  <div className="p-2 bg-blue-500 rounded-lg">
+                    <Brain className="w-5 h-5 text-white" />
+                  </div>
+                  Detailed Plan Overview
+                </h3>
+                <MarkdownText className="text-gray-700 text-base sm:text-lg leading-relaxed">
+                  {dietPlan?.overview || 'Your personalized diet plan has been created based on your health profile and preferences. This comprehensive plan includes meal recommendations, shopping lists, and guidelines tailored specifically for you.'}
                 </MarkdownText>
                 
-                {dietPlan.metadata && (
+                {dietPlan?.metadata && (
                   <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
                     <div className="text-center p-2 sm:p-3 bg-white/50 rounded-lg">
                       <div className="font-semibold text-blue-600">Method</div>
-                      <div className="text-gray-600 capitalize">{dietPlan.metadata.generationMethod || 'AI'}</div>
+                      <div className="text-gray-600 capitalize">{dietPlan?.metadata?.generationMethod || 'AI'}</div>
                     </div>
                     <div className="text-center p-2 sm:p-3 bg-white/50 rounded-lg">
                       <div className="font-semibold text-blue-600">Confidence</div>
-                      <div className="text-gray-600">{Math.round((dietPlan.metadata.confidenceScore || 0.8) * 100)}%</div>
+                      <div className="text-gray-600">{Math.round((dietPlan?.metadata?.confidenceScore || 0.8) * 100)}%</div>
                     </div>
                     <div className="text-center p-2 sm:p-3 bg-white/50 rounded-lg">
                       <div className="font-semibold text-blue-600">Duration</div>
@@ -364,21 +468,21 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
                     </div>
                     <div className="text-center p-2 sm:p-3 bg-white/50 rounded-lg">
                       <div className="font-semibold text-blue-600">Categories</div>
-                      <div className="text-gray-600">{dietPlan.shoppingList?.length || 0}</div>
+                      <div className="text-gray-600">{dietPlan?.shoppingList?.length || 0}</div>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Key Restrictions */}
-              {dietPlan.restrictions && dietPlan.restrictions.length > 0 && (
+              {dietPlan?.restrictions && dietPlan.restrictions.length > 0 && (
                 <div className="bg-red-50 border border-red-200 rounded-xl sm:rounded-2xl p-4 sm:p-6">
                   <h3 className="text-base sm:text-lg font-semibold text-red-900 mb-4 flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5" />
                     Important Dietary Restrictions
                   </h3>
                   <div className="space-y-2 sm:space-y-3">
-                    {dietPlan.restrictions.map((restriction: string, index: number) => (
+                    {dietPlan?.restrictions?.map((restriction: string, index: number) => (
                       <div key={index} className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-red-100 rounded-lg">
                         <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 mt-0.5 flex-shrink-0" />
                         <MarkdownText className="text-red-800 text-sm sm:text-base">{restriction}</MarkdownText>
@@ -389,14 +493,14 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
               )}
 
               {/* Key Recommendations */}
-              {dietPlan.recommendations && dietPlan.recommendations.length > 0 && (
+              {dietPlan?.recommendations && dietPlan.recommendations.length > 0 && (
                 <div className="bg-green-50 border border-green-200 rounded-xl sm:rounded-2xl p-4 sm:p-6">
                   <h3 className="text-base sm:text-lg font-semibold text-green-900 mb-4 flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                     Health Recommendations
                   </h3>
                   <div className="grid gap-2 sm:gap-3">
-                    {dietPlan.recommendations.map((recommendation: string, index: number) => (
+                    {dietPlan?.recommendations?.map((recommendation: string, index: number) => (
                       <div key={index} className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-green-100 rounded-lg">
                         <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-600 mt-0.5 flex-shrink-0" />
                         <MarkdownText className="text-green-800 text-sm sm:text-base">{recommendation}</MarkdownText>
@@ -407,11 +511,11 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
               )}
 
               {/* Special Notes */}
-              {dietPlan.specialNotes && dietPlan.specialNotes.length > 0 && (
+              {dietPlan?.specialNotes && dietPlan.specialNotes.length > 0 && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-xl sm:rounded-2xl p-4 sm:p-6">
                   <h3 className="text-base sm:text-lg font-semibold text-yellow-900 mb-4">Special Notes</h3>
                   <ul className="space-y-2">
-                    {dietPlan.specialNotes.map((note: string, index: number) => (
+                    {dietPlan?.specialNotes?.map((note: string, index: number) => (
                       <li key={index} className="text-yellow-800 flex items-start gap-2 text-sm sm:text-base">
                         <span className="text-yellow-600 mt-1">•</span>
                         <MarkdownText>{note}</MarkdownText>
@@ -530,11 +634,17 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
                               <button
                                 onClick={() => {
                                   const searchQuery = `${mealInfo.name} ${mealInfo.calories ? `around ${mealInfo.calories} calories` : ''}`;
+                                  console.log('🔍 Find Recipes button clicked:', { searchQuery, mealType, calories: mealInfo.calories });
+                                  
+                                  // Dispatch the search event
                                   window.dispatchEvent(new CustomEvent('searchRecipes', { 
                                     detail: { query: searchQuery, mealType, targetCalories: mealInfo.calories } 
                                   }));
+                                  
+                                  // Close the modal immediately for better UX
+                                  onClose();
                                 }}
-                                className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs sm:text-sm font-medium flex items-center justify-center gap-2 touch-manipulation"
+                                className="w-full px-3 sm:px-4 py-2 sm:py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 text-xs sm:text-sm font-medium flex items-center justify-center gap-2 touch-manipulation shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95"
                               >
                                 <Search className="w-3 h-3 sm:w-4 sm:h-4" />
                                 Find Recipes for This Meal
@@ -569,7 +679,7 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
                 </div>
               </div>
               
-              {dietPlan.shoppingList && dietPlan.shoppingList.length > 0 ? (
+              {dietPlan?.shoppingList && dietPlan.shoppingList.length > 0 ? (
                 <div className="space-y-4 sm:space-y-6">
                   {dietPlan.shoppingList.map((category: any, categoryIndex: number) => (
                     <div key={categoryIndex} className="bg-white border border-gray-200 rounded-xl sm:rounded-2xl p-4 sm:p-6">
@@ -615,19 +725,19 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
           {activeTab === 'guidelines' && (
             <div className="space-y-4 sm:space-y-6">
               {/* Nutritional Guidelines */}
-              {dietPlan.nutritionalGuidelines && (
+              {dietPlan?.nutritionalGuidelines && (
                 <div className="bg-blue-50 border border-blue-200 rounded-xl sm:rounded-2xl p-4 sm:p-6">
                   <h3 className="text-base sm:text-lg font-semibold text-blue-900 mb-4">Nutritional Guidelines</h3>
-                  <MarkdownText className="text-blue-800 text-sm sm:text-base">{dietPlan.nutritionalGuidelines}</MarkdownText>
+                  <MarkdownText className="text-blue-800 text-sm sm:text-base">{dietPlan?.nutritionalGuidelines}</MarkdownText>
                 </div>
               )}
 
               {/* Emergency Substitutions */}
-              {dietPlan.emergencySubstitutions && dietPlan.emergencySubstitutions.length > 0 && (
+              {dietPlan?.emergencySubstitutions && dietPlan.emergencySubstitutions.length > 0 && (
                 <div className="bg-purple-50 border border-purple-200 rounded-xl sm:rounded-2xl p-4 sm:p-6">
                   <h3 className="text-base sm:text-lg font-semibold text-purple-900 mb-4">Emergency Substitutions</h3>
                   <div className="space-y-3 sm:space-y-4">
-                    {dietPlan.emergencySubstitutions.map((sub: any, index: number) => (
+                    {dietPlan?.emergencySubstitutions?.map((sub: any, index: number) => (
                       <div key={index} className="bg-purple-100 rounded-lg p-3 sm:p-4">
                         <MarkdownText className="text-purple-800 text-sm sm:text-base">{sub}</MarkdownText>
                       </div>
@@ -637,10 +747,10 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
               )}
 
               {/* Progress Tracking */}
-              {dietPlan.progressTracking && (
+              {dietPlan?.progressTracking && (
                 <div className="bg-green-50 border border-green-200 rounded-xl sm:rounded-2xl p-4 sm:p-6">
                   <h3 className="text-base sm:text-lg font-semibold text-green-900 mb-4">Progress Tracking</h3>
-                  <MarkdownText className="text-green-800 text-sm sm:text-base">{dietPlan.progressTracking}</MarkdownText>
+                  <MarkdownText className="text-green-800 text-sm sm:text-base">{dietPlan?.progressTracking}</MarkdownText>
                 </div>
               )}
             </div>
@@ -650,14 +760,14 @@ export default function DietPlanViewer({ isOpen, onClose, onEdit, userId }: Diet
           {activeTab === 'tips' && (
             <div className="space-y-4 sm:space-y-6">
               {/* Meal Prep Tips */}
-              {dietPlan.mealPrepTips && dietPlan.mealPrepTips.length > 0 && (
+              {dietPlan?.mealPrepTips && dietPlan.mealPrepTips.length > 0 && (
                 <div className="bg-green-50 border border-green-200 rounded-xl sm:rounded-2xl p-4 sm:p-6">
                   <h3 className="text-base sm:text-lg font-semibold text-green-900 mb-4 flex items-center gap-2">
                     <ChefHat className="w-4 h-4 sm:w-5 sm:h-5" />
                     Meal Prep Tips
                   </h3>
                   <ul className="space-y-2 sm:space-y-3">
-                    {dietPlan.mealPrepTips.map((tip: string, index: number) => (
+                    {dietPlan?.mealPrepTips?.map((tip: string, index: number) => (
                       <li key={index} className="text-green-800 flex items-start gap-2 text-sm sm:text-base">
                         <span className="text-green-600 mt-1">•</span>
                         <MarkdownText className="flex-1">{tip}</MarkdownText>

@@ -7,7 +7,7 @@ const AI_PROVIDERS = {
   PERPLEXITY: {
     url: 'https://api.perplexity.ai/chat/completions',
     key: process.env.PERPLEXITY_API_KEY,
-    model: 'llama-3.1-sonar-large-128k-online'
+    model: 'sonar'
   },
   OPENAI: {
     url: 'https://api.openai.com/v1/chat/completions',

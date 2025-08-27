@@ -17,7 +17,7 @@ import FavoritesModal from '@/components/FavoritesModal';
 import HealthProfileModal from '@/components/HealthProfileModal';
 import DietPlanViewer from '@/components/DietPlanViewer';
 import AuthModal from '@/components/AuthModal';
-import { Search, Loader2, AlertCircle, Sparkles, Filter, Heart, Brain, ChefHat, Star, Utensils } from 'lucide-react';
+import { Search, Loader2, AlertCircle, Sparkles, Filter, Heart, Brain, ChefHat, Star, Utensils, X, CheckCircle, AlertTriangle } from 'lucide-react';
 import UserGuide, { QuickTips } from '@/components/UserGuide';
 
 // Mock recipe data
@@ -725,37 +725,61 @@ export default function RecipeSearchPage() {
 
   // Handle AI natural language search from AdvancedSearch component
   const handleNaturalLanguageSearch = useCallback(async (query: string): Promise<Recipe[]> => {
+    console.log('🚀 Starting AI Natural Language Search for:', query);
     setLoading(true);
     setHasSearched(true);
     setLastSearchPrompt(query);
 
     try {
-      console.log('🤖 AI Natural Language Search:', query);
+      console.log('📡 Calling searchRecipesWithParsing API...');
       
       const result = await searchRecipesWithParsing({ 
         prompt: query,
         maxResults: 5
       });
 
-      if (result.success && result.recipes.length > 0) {
-        console.log('✅ AI search returned', result.recipes.length, 'recipes');
+      console.log('📋 API Response received:', {
+        success: result.success,
+        recipesCount: result.recipes?.length || 0,
+        error: result.error,
+        hasRecipes: !!(result.recipes && result.recipes.length > 0)
+      });
+
+      if (result.success && result.recipes && result.recipes.length > 0) {
+        console.log('✅ AI search successful! Found', result.recipes.length, 'recipes');
+        console.log('🍳 First recipe:', result.recipes[0]?.title || 'Unknown');
         setRecipes(result.recipes);
         setSearchError(null);
         return result.recipes;
       } else {
-        console.log('⚠️ AI search found no results, showing filtered mock data');
+        console.log('⚠️ AI search failed or no results found');
+        console.log('📊 Full response:', result);
+        
         const filteredMock = filterMockRecipes(mockRecipes, currentFilters, ingredients);
         setRecipes(filteredMock);
-        setSearchError(filteredMock.length === 0 ? 'No recipes found for your query. Try rephrasing or being more specific.' : null);
+        
+        const errorMessage = result.error ? 
+          `AI search failed: ${result.error}. Showing mock recipes instead.` : 
+          'AI search returned no results. Showing mock recipes instead.';
+          
+        setSearchError(errorMessage);
+        console.log('🔄 Falling back to', filteredMock.length, 'mock recipes');
         return filteredMock;
       }
     } catch (error) {
-      console.error('❌ AI search error:', error);
-      setSearchError('AI search failed. Please try again.');
+      console.error('💥 AI search threw an error:', error);
+      console.error('Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
+      setSearchError(`AI search failed: ${error instanceof Error ? error.message : 'Unknown error'}. Showing mock recipes instead.`);
       const filteredMock = filterMockRecipes(mockRecipes, currentFilters, ingredients);
       setRecipes(filteredMock);
       return filteredMock;
     } finally {
+      console.log('🏁 AI search completed, setting loading to false');
       setLoading(false);
     }
   }, [currentFilters, ingredients]);
@@ -765,21 +789,35 @@ export default function RecipeSearchPage() {
     const handleSearchRecipes = (event: Event) => {
       const customEvent = event as CustomEvent;
       const { query, mealType, targetCalories } = customEvent.detail;
-      console.log('🍽️ Searching recipes for meal:', mealType, 'Query:', query);
+      console.log('🍽️ Event received - Searching recipes for meal:', mealType, 'Query:', query, 'Calories:', targetCalories);
       
       // Close diet plan modal and search for recipes
       setShowDietPlan(false);
+      console.log('🔒 Closed diet plan modal');
       
       // Set up search with calorie filter
       if (targetCalories) {
         const calorieRange = 50; // +/- 50 calories
-        setLastSearchPrompt(`${query} (${targetCalories - calorieRange} to ${targetCalories + calorieRange} calories)`);
+        const searchPrompt = `${query} (${targetCalories - calorieRange} to ${targetCalories + calorieRange} calories)`;
+        setLastSearchPrompt(searchPrompt);
+        console.log('🎯 Set search prompt with calories:', searchPrompt);
       } else {
         setLastSearchPrompt(query);
+        console.log('🎯 Set search prompt:', query);
       }
       
       // Perform the search
-      handleNaturalLanguageSearch(query);
+      console.log('🔍 Starting recipe search...');
+      handleNaturalLanguageSearch(query).then(() => {
+        // Scroll to results section after search completes
+        setTimeout(() => {
+          const resultsSection = document.querySelector('.recipe-results');
+          if (resultsSection) {
+            resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            console.log('📍 Scrolled to results section');
+          }
+        }, 500);
+      });
     };
 
     window.addEventListener('searchRecipes', handleSearchRecipes);
@@ -875,12 +913,36 @@ export default function RecipeSearchPage() {
   }, []);
 
   const handleDietPlanComplete = (dietPlan: any) => {
-    console.log('✅ Diet plan completed:', dietPlan);
-    setCurrentDietPlan(dietPlan);
-    setHasDietPlan(true);
-    setShowHealthProfile(false);
-    setShowDietPlan(true);
-  };
+  console.log('=== DIET PLAN CALLBACK DEBUG START ===');
+  console.log('handleDietPlanComplete called with:', typeof dietPlan);
+  console.log('Diet plan is null:', dietPlan === null);
+  console.log('Diet plan is undefined:', dietPlan === undefined);
+  
+  if (dietPlan) {
+    console.log('Diet plan keys:', Object.keys(dietPlan));
+    console.log('Diet plan overview exists:', !!dietPlan.overview);
+    console.log('Diet plan mealPlan exists:', !!dietPlan.mealPlan);
+    console.log('Diet plan shoppingList exists:', !!dietPlan.shoppingList);
+    console.log('Full diet plan structure:');
+    console.log(JSON.stringify(dietPlan, null, 2));
+  }
+
+  console.log('Setting currentDietPlan state...');
+  setCurrentDietPlan(dietPlan);
+  
+  console.log('Setting hasDietPlan to true...');
+  setHasDietPlan(true);
+  
+  console.log('Closing health profile modal...');
+  setShowHealthProfile(false);
+  
+  console.log('Opening diet plan viewer...');
+  setShowDietPlan(true);
+  
+  console.log('Current showDietPlan state should now be true');
+  console.log('Current currentDietPlan state:', dietPlan ? 'has data' : 'no data');
+  console.log('=== DIET PLAN CALLBACK DEBUG END ===');
+};
 
   const handleViewDietPlan = () => {
     if (!user) {
@@ -1343,10 +1405,26 @@ export default function RecipeSearchPage() {
               </div>
             </div>
             
-            <p className="text-xl text-gray-700 max-w-3xl mx-auto mb-8 leading-relaxed">
-              Discover amazing recipes using AI-powered search with your ingredients and preferences. 
+            <p className="text-lg sm:text-xl text-gray-700 max-w-3xl mx-auto mb-8 leading-relaxed">
+              🤖 Discover amazing recipes using <span className="font-semibold text-purple-700">AI-powered search</span> with your ingredients and preferences. 
               Get personalized recommendations and create your perfect meal plan.
             </p>
+            
+            {/* Quick Stats for credibility */}
+            <div className="flex flex-wrap justify-center items-center gap-6 mb-8 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span>✨ AI-Powered</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span>🍳 Real Recipes</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                <span>🏥 Health-Focused</span>
+              </div>
+            </div>
             
             {/* Diet Plan CTA Section */}
             <div className="flex flex-wrap items-center justify-center gap-4 mb-6 diet-plan-cta">
@@ -1386,21 +1464,26 @@ export default function RecipeSearchPage() {
                   )}
                 </>
               ) : (
-                <button
-                  onClick={() => {
-                    console.log('Not logged in, showing auth modal');
-                    setAuthModalMode('register');
-                    setShowAuthModal(true);
-                  }}
-                  className="group px-8 py-4 bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 text-white rounded-2xl hover:from-violet-600 hover:via-purple-600 hover:to-fuchsia-600 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl transform hover:scale-105 flex items-center gap-3"
-                >
-                  <Brain className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                  Sign Up for Diet Plan
-                  <div className="flex items-center gap-1">
-                    <span className="text-yellow-300 text-sm">FREE</span>
-                    <Sparkles className="w-4 h-4 text-yellow-300 animate-pulse" />
-                  </div>
-                </button>
+                <div className="flex flex-col items-center gap-4">
+                  <button
+                    onClick={() => {
+                      console.log('Not logged in, showing auth modal');
+                      setAuthModalMode('register');
+                      setShowAuthModal(true);
+                    }}
+                    className="group px-8 py-4 bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 text-white rounded-2xl hover:from-violet-600 hover:via-purple-600 hover:to-fuchsia-600 transition-all duration-300 font-bold shadow-xl hover:shadow-2xl transform hover:scale-105 flex items-center gap-3"
+                  >
+                    <Brain className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                    Sign Up for Diet Plan
+                    <div className="flex items-center gap-1">
+                      <span className="text-yellow-300 text-sm">FREE</span>
+                      <Sparkles className="w-4 h-4 text-yellow-300 animate-pulse" />
+                    </div>
+                  </button>
+                  <p className="text-sm text-gray-600 text-center max-w-md">
+                    💡 <span className="font-medium">Pro tip:</span> You can search for recipes without signing up! Try the AI search below.
+                  </p>
+                </div>
               )}
             </div>
 
@@ -1456,79 +1539,113 @@ export default function RecipeSearchPage() {
         </div>
 
         {/* Advanced Search with beautiful styling */}
-        <div className="group relative ai-search">
-          <div className="absolute inset-0 bg-gradient-to-r from-violet-500/20 to-cyan-500/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
-          <div className="relative bg-white/80 backdrop-blur-lg rounded-3xl shadow-xl border border-white/20 p-8 hover:shadow-2xl transition-all duration-300">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-3 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-xl">
-                <Brain className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold text-gray-800">AI Recipe Search</h3>
-                <p className="text-gray-600 text-sm">Describe what you want and let AI find the perfect recipe</p>
+        <div className="ai-search w-full mt-12 space-y-6">
+  
+  {/* Search Card */}
+  <div className="relative bg-white/90 backdrop-blur-lg rounded-3xl shadow-xl border border-white/20 p-8 hover:shadow-2xl transition-all duration-300">
+    <div className="flex items-center gap-3 mb-6">
+      <div className="p-3 bg-gradient-to-br from-violet-500 to-cyan-500 rounded-xl">
+        <Brain className="w-6 h-6 text-white" />
+      </div>
+      <div>
+        <h3 className="text-xl font-semibold text-gray-800">AI Recipe Search</h3>
+        <p className="text-gray-600 text-sm">
+          Describe what you want and let AI find the perfect recipe
+        </p>
+      </div>
+    </div>
+
+    <AdvancedSearch
+      onSearch={(query, filters) => {
+        if (filters) handleFiltersChange(filters);
+        handleSearch();
+      }}
+      onNaturalLanguageQuery={handleNaturalLanguageSearch}
+      isLoading={loading}
+    />
+  </div>
+</div>
+
+
+        {/* Loading and Progress Indicator */}
+        {loading && (
+          <div className="text-center py-8">
+            <div className="group relative bg-white/90 backdrop-blur-lg rounded-3xl shadow-xl border border-white/20 p-8 mx-auto max-w-md">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur-xl"></div>
+              <div className="relative">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="relative">
+                    <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center animate-pulse">
+                      <Brain className="w-8 h-8 text-white" />
+                    </div>
+                    <div className="absolute inset-0 border-4 border-blue-300 rounded-full animate-spin border-t-transparent"></div>
+                  </div>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">🤖 AI is Cooking Something Special!</h3>
+                <p className="text-gray-600 text-sm">Searching thousands of recipes to find your perfect match...</p>
+                
+                {/* Fun loading messages */}
+                <div className="mt-4 text-xs text-gray-500">
+                  <div className="flex items-center justify-center gap-1 mb-1">
+                    <div className="w-1 h-1 bg-purple-500 rounded-full animate-bounce"></div>
+                    <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-1 h-1 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  </div>
+                  <div>Analyzing ingredients • Finding perfect matches • Creating magic ✨</div>
+                </div>
               </div>
             </div>
-            <AdvancedSearch
-              onSearch={(query, filters) => {
-                if (filters) handleFiltersChange(filters);
-                handleSearch();
-              }}
-              onNaturalLanguageQuery={handleNaturalLanguageSearch}
-              isLoading={loading}
-            />
           </div>
-        </div>
+        )}
 
-        {/* Enhanced Manual Search Button */}
-        <div className="text-center space-y-6">
-          <button
-            onClick={handleSearch}
-            disabled={loading}
-            className="manual-search-btn group relative px-16 py-5 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white rounded-3xl hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 transition-all duration-300 font-bold text-lg shadow-2xl hover:shadow-3xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-4 mx-auto overflow-hidden"
-          >
-            {/* Background animation */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-pink-400/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
-            
-            <div className="relative flex items-center gap-4">
-              {loading ? (
-                <>
-                  <Loader2 className="w-7 h-7 animate-spin" />
-                  <span className="bg-gradient-to-r from-yellow-200 to-pink-200 bg-clip-text text-transparent">
-                    Searching with AI Magic...
-                  </span>
-                </>
-              ) : (
-                <>
-                  <Search className="w-7 h-7 group-hover:scale-110 transition-transform" />
-                  <span>Search Recipes Manually</span>
-                  <Sparkles className="w-5 h-5 text-yellow-300 group-hover:animate-pulse" />
-                </>
-              )}
-            </div>
-          </button>
-
-          {(hasSearched || ingredients.length > 0 || hasActiveFilters()) && (
-            <button
-              onClick={clearSearch}
-              className="px-8 py-3 text-gray-600 hover:text-gray-800 transition-colors bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-200 hover:bg-white/80 hover:shadow-lg transform hover:scale-105 transition-all duration-200"
-            >
-              Clear All & Reset
-            </button>
-          )}
-        </div>
+        {/* Clear Search Button */}
+        {!loading && (
+          <div className="text-center">
+            {(hasSearched || ingredients.length > 0 || hasActiveFilters()) && (
+              <button
+                onClick={clearSearch}
+                className="px-8 py-3 text-gray-600 hover:text-gray-800 transition-colors bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-200 hover:bg-white/80 hover:shadow-lg transform hover:scale-105 transition-all duration-200 flex items-center gap-2 mx-auto"
+              >
+                <X className="w-4 h-4" />
+                Clear All & Reset
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Enhanced Status Cards */}
-        {lastSearchPrompt && (
+        {lastSearchPrompt && !loading && (
           <div className="relative group">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
             <div className="relative bg-blue-50/80 backdrop-blur-sm border border-blue-200/50 rounded-2xl p-6 shadow-lg">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl">
-                  <Sparkles className="w-5 h-5 text-white" />
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl">
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="font-semibold text-blue-900">AI Search Results</span>
                 </div>
-                <span className="font-semibold text-blue-900">AI Search Query:</span>
+                {recipes.length > 0 && (
+                  <div className="flex items-center gap-2 bg-white/80 px-3 py-1 rounded-full">
+                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm font-medium text-green-700">{recipes.length} recipes found</span>
+                  </div>
+                )}
               </div>
-              <p className="text-blue-800 font-medium">{lastSearchPrompt}</p>
+              <div className="bg-white/60 backdrop-blur-sm px-4 py-3 rounded-lg border border-blue-200/30">
+                <p className="text-blue-800 font-medium text-sm">
+                  <span className="opacity-70">Query:</span> "{lastSearchPrompt}"
+                </p>
+              </div>
+              {searchError && (
+                <div className="mt-3 flex items-start gap-3 bg-amber-50/80 border border-amber-200/50 px-4 py-3 rounded-lg">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-amber-800">
+                    <div className="font-medium mb-1">Search Notice:</div>
+                    <div>{searchError}</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1620,28 +1737,27 @@ export default function RecipeSearchPage() {
         {/* Results Section */}
         {!loading && (
           <div className="space-y-8 recipe-results">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <h2 className="text-4xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
-                  {hasSearched ? 'Search Results' : 'Featured Recipes'}
-                </h2>
-                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full">
-                  <Star className="w-4 h-4 text-purple-600" />
-                  <span className="font-semibold text-purple-800">{recipes.length} recipes</span>
-                </div>
-              </div>
-              
-              {shoppingRecipes.length > 0 && (
-                <button
+            {/* Enhanced Header */}
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-3xl blur-2xl"></div>
+             
+                
+                  
+                  
+                  {/* Shopping List Button */}
+                  {shoppingRecipes.length > 0 && (
+                    <button
                   onClick={() => setShowShoppingList(true)}
                   className="group px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-2xl hover:from-green-600 hover:to-emerald-600 transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center gap-3"
                 >
                   <div className="p-1 bg-white/20 rounded-lg">
                     <Utensils className="w-4 h-4" />
                   </div>
-                  Shopping List ({shoppingRecipes.length})
-                </button>
-              )}
+                      Shopping List ({shoppingRecipes.length})
+                    </button>
+                  )}
+               
+          
             </div>
 
             {recipes.length === 0 ? (
@@ -1691,7 +1807,7 @@ export default function RecipeSearchPage() {
           </div>
         )}
       </div>
-      
+
       {/* Modals */}
       
       {/* Recipe Details Modal */}
@@ -1751,6 +1867,8 @@ export default function RecipeSearchPage() {
           setShowDietPlan(false);
           setShowHealthProfile(true);
         }}
+        userId={user?.id}
+        dietPlanData={currentDietPlan}
       />
 
       {/* Auth Modal */}

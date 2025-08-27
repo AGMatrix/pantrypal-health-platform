@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.1-sonar-large-128k-online',
+        model: 'sonar',
         messages: [
           {
             role: 'system',
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
           }
         ],
         max_tokens: 4000,
-        temperature: 0.2, // Slightly higher for more creativity
+        temperature: 0.2, 
         top_p: 1,
         return_citations: true,
         search_domain_filter: ["allrecipes.com", "foodnetwork.com", "epicurious.com", "tasty.co", "simplyrecipes.com"]
@@ -273,7 +273,7 @@ Focus on creating recipes that will genuinely satisfy the user's request and be 
 
 async function saveRecipeToDatabase(recipe: any) {
   try {
-    const response = await fetch('/api/recipes', {
+    const response = await fetch('http://localhost:3001/api/recipes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(recipe)

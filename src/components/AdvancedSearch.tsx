@@ -439,45 +439,34 @@ export default function AdvancedSearch({
             <div className="text-sm font-medium text-blue-900 mb-2">
               💡 AI Assistant asks:
             </div>
-            <div className="space-y-2">
-              {followUpQuestions.map((question, index) => (
-                <button
-                  key={index}
-                  onClick={() => handleFollowUpClick(question)}
-                  className="block text-left text-sm text-blue-700 hover:text-blue-900 hover:bg-blue-100 p-2 rounded transition-colors w-full"
-                >
-                  {question}
-                </button>
-              ))}
-            </div>
+            
           </div>
         )}
       </div>
 
-      {/* Dropdown Suggestions */}
       {showSuggestions && !queryAnalysis && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
-          {/* Quick Suggestions */}
-          <div className="p-4">
-            <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
-              <Zap className="w-4 h-4 text-yellow-500" />
-              Quick Ideas
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {suggestions.map(suggestion => (
-                <button
-                  key={suggestion.id}
-                  onClick={() => handleSuggestionClick(suggestion)}
-                  className="text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{suggestion.icon}</span>
-                    <span className="text-sm font-medium text-gray-900">{suggestion.text}</span>
-                  </div>
-                </button>
-              ))}
+  <div className="mt-4 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
+    {/* Quick Suggestions */}
+    <div className="p-4">
+      <h4 className="text-sm font-small text-gray-900 mb-3 flex items-center gap-2">
+        <Zap className="w-4 h-4 text-yellow-500" />
+        Quick Ideas
+      </h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        {suggestions.map(suggestion => (
+          <button
+            key={suggestion.id}
+            onClick={() => handleSuggestionClick(suggestion)}
+            className="text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">{suggestion.icon}</span>
+              <span className="text-sm font-medium text-gray-900">{suggestion.text}</span>
             </div>
-          </div>
+          </button>
+        ))}
+      </div>
+    </div>
 
           {/* Recent Queries */}
           {recentQueries.length > 0 && (

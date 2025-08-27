@@ -53,7 +53,7 @@ export async function POST(request: Request) {
                 'Authorization': `Bearer ${apiKey}`
             },
             body: JSON.stringify({
-                model: 'llama-3.1-sonar-large-128k-online', // Using larger model for better results
+                model: 'sonar', 
                 messages: [
                     {
                         role: 'system',

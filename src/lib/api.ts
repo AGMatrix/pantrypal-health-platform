@@ -47,7 +47,7 @@ export async function searchRecipesWithParsing(req: {
     console.log('🚀 Searching recipes via API route:', req.prompt);
     
     // Call our API route instead of directly calling Perplexity
-    const response = await fetch('/api/recipes/search-with-parsing', {
+    const response = await fetch('/api/recipes/ai-search', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -72,11 +72,11 @@ export async function searchRecipesWithParsing(req: {
 
     const data = await response.json();
     
-    if (data.success && data.data && Array.isArray(data.data.recipes)) {
-      console.log('✅ Search with parsing successful, got', data.data.recipes.length, 'recipes');
+    if (data.success && Array.isArray(data.recipes)) {
+      console.log('✅ AI search successful, got', data.recipes.length, 'recipes');
       return {
-        recipes: data.data.recipes,
-        rawResponse: data.data.rawResponse || '',
+        recipes: data.recipes,
+        rawResponse: data.rawResponse || '',
         success: true
       };
     } else {
