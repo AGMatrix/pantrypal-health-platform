@@ -195,18 +195,6 @@ export default function HealthProfileModal({ isOpen, onClose, onComplete }: Heal
         userId: 'user-' + Date.now()
       };
 
-      console.log('📋 Request data:', requestData);
-      console.log('🔍 Rare analysis format check:', {
-        hasRareAnalysis: !!formattedRareAnalysis,
-        isArray: Array.isArray(formattedRareAnalysis),
-        length: formattedRareAnalysis.length,
-        type: typeof formattedRareAnalysis,
-        value: formattedRareAnalysis
-      });
-      
-      // DETAILED DEBUGGING: Log the exact JSON that will be sent
-      console.log('🔍 EXACT JSON BEING SENT:', JSON.stringify(requestData, null, 2));
-
       const response = await fetch('/api/health/diet-plan', {
         method: 'POST',
         headers: {
@@ -214,8 +202,6 @@ export default function HealthProfileModal({ isOpen, onClose, onComplete }: Heal
         },
         body: JSON.stringify(requestData),
       });
-
-      console.log('📥 Response status:', response.status);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -233,104 +219,18 @@ export default function HealthProfileModal({ isOpen, onClose, onComplete }: Heal
       }
 
       const result = await response.json();
-      console.log('✅ Diet plan result:', result);
 
       if (result.success && result.data) {
-        console.log('🎉 Diet plan generated successfully!');
-        console.log('📋 Diet plan data:', result.data);
-        
-        try {
-          console.log('🔄 Calling onComplete callback...');
-          onComplete(result.data);
-          console.log('✅ onComplete callback successful');
-          handleClose();
-        } catch (callbackError) {
-          console.error('❌ Error in onComplete callback:', callbackError);
-          setError(`Diet plan generated but failed to display: ${callbackError instanceof Error ? callbackError.message : 'Unknown error'}`);
-        }
+        onComplete(result.data);
+        handleClose();
       } else {
         throw new Error(result.error || 'No diet plan data received');
       }
 
     } catch (error) {
-      console.error('❌ Diet plan generation failed:', error);
       setError(error instanceof Error ? error.message : 'Failed to generate diet plan');
     } finally {
       setIsGenerating(false);
-    }
-  };
-
-  const handleDebugSchema = async () => {
-    const severityLevels = healthConditions.reduce((acc, condition) => {
-      acc[condition.name] = condition.severity;
-      return acc;
-    }, {} as Record<string, string>);
-
-    let formattedRareAnalysis: any[] = [];
-    if (rareConditionAnalysis) {
-      formattedRareAnalysis = [{
-        conditionName: rareConditionAnalysis.conditionName,
-        definition: `AI-analyzed rare condition: ${rareConditionAnalysis.conditionName}`,
-        overview: `Comprehensive analysis of ${rareConditionAnalysis.conditionName} with dietary considerations`,
-        confidenceLevel: rareConditionAnalysis.confidenceLevel,
-        dietaryRecommendations: {
-          avoidFoods: rareConditionAnalysis.dietaryRecommendations.avoidFoods || [],
-          recommendedFoods: rareConditionAnalysis.dietaryRecommendations.recommendedFoods || [],
-          keyNutrients: rareConditionAnalysis.dietaryRecommendations.keyNutrients || [],
-          mealPlanningTips: [`Consider ${rareConditionAnalysis.conditionName}-specific dietary needs`]
-        },
-        warningSigns: ['Monitor for condition-specific symptoms', 'Watch for unusual reactions to foods'],
-        specialNotes: [
-          `This analysis includes AI-researched information for ${rareConditionAnalysis.conditionName}`,
-          'Regular medical monitoring recommended',
-          'Work with healthcare providers familiar with this condition'
-        ],
-        medicationInteractions: [],
-        restrictions: ['rare-condition-monitored', 'medical-supervision-required'],
-        recommendations: ['nutrient-dense', 'anti-inflammatory', 'individualized-approach'],
-        medicalDisclaimer: 'This analysis includes AI-researched information for a rare condition. Always consult your healthcare provider for personalized medical advice.'
-      }];
-    }
-
-    const testData = {
-      healthConditions: healthConditions.map(c => c.name),
-      severityLevels,
-      currentMedications,
-      allergens,
-      dietaryPreferences: selectedDietaryPreferences,
-      goalType,
-      rareConditionAnalysis: formattedRareAnalysis,
-      preferences: {
-        cookingSkillLevel: cookingSkill,
-        budgetRange: {
-          min: budgetMin,
-          max: budgetMax
-        }
-      },
-      userId: 'user-' + Date.now()
-    };
-
-    console.log('🧪 Testing schema with debug endpoint...');
-    console.log('🧪 Test data:', testData);
-
-    try {
-      const response = await fetch('/api/debug/diet-plan-schema', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(testData)
-      });
-
-      const result = await response.json();
-      console.log('🧪 Debug result:', result);
-      
-      if (result.success) {
-        alert('✅ Schema validation passed!');
-      } else {
-        alert('❌ Schema validation failed: ' + result.error);
-      }
-    } catch (error) {
-      console.error('🧪 Debug test failed:', error);
-      alert('❌ Debug test failed: ' + error);
     }
   };
 

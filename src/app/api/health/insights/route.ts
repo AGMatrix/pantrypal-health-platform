@@ -1,10 +1,11 @@
 // src/app/api/health/insights/route.ts
 import { NextRequest } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { supabase } from '@/lib/database';
+import { createSupabaseServerClient } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = createSupabaseServerClient();
     const authUser = await getAuthUser(request);
     if (!authUser) {
       return Response.json({ success: false, error: 'Authentication required' }, { status: 401 });
@@ -60,6 +61,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createSupabaseServerClient();
     const authUser = await getAuthUser(request);
     if (!authUser) {
       return Response.json({ success: false, error: 'Authentication required' }, { status: 401 });

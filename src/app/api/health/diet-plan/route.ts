@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateDietPlanWithAI } from '@/lib/ai-diet-generator';
 import { getAuthUser } from '@/lib/auth';
-import { supabase } from '@/lib/database';
+import { createSupabaseServerClient } from '@/lib/supabase';
 
 // Get user session using the correct auth function
 async function getUserSession(request: NextRequest) {
@@ -18,6 +18,7 @@ async function getUserSession(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = createSupabaseServerClient();
     console.log('GET /api/health/diet-plan - Health check');
     
     // Get user session (optional for GET)
@@ -121,6 +122,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createSupabaseServerClient();
     console.log('🚀 POST /api/health/diet-plan - Starting diet plan generation');
     
     const body = await request.json();

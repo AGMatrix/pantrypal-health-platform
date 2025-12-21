@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { supabase } from '@/lib/database';
+import { createSupabaseServerClient } from '@/lib/supabase';
 
 // GET recipes (search, filter, etc.)
 export async function GET(request: NextRequest) {
   try {
+    const supabase = createSupabaseServerClient();
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');
     const cuisine = searchParams.get('cuisine');
@@ -62,6 +63,7 @@ export async function GET(request: NextRequest) {
 // POST new recipe (save AI-generated recipes)
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createSupabaseServerClient();
     const authUser = await getAuthUser(request);
     
     if (!authUser) {

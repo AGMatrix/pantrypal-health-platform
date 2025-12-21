@@ -1,7 +1,5 @@
-// Enhanced forgot-password route with detailed debugging
-
 import { NextRequest } from 'next/server';
-import { supabase } from '@/lib/database';
+import { createSupabaseServerClient } from '@/lib/supabase';
 import { Resend } from 'resend';
 
 const getResendClient = () => {
@@ -14,8 +12,7 @@ const getResendClient = () => {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔄 Processing forgot password request...');
-    
+    const supabase = createSupabaseServerClient();
     const { email } = await request.json();
     
     if (!email || !email.includes('@')) {

@@ -1,11 +1,12 @@
 import { NextRequest } from 'next/server';
-import { supabase } from '@/lib/database';
+import { createSupabaseServerClient } from '@/lib/supabase';
 import { verifyPassword, generateToken } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createSupabaseServerClient();
     const { email, password } = await request.json();
-    
+
     // Basic validation
     if (!email || !password) {
       return Response.json(
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     // Find user by email
     const { data: user, error: userError } = await supabase
       .from('users')

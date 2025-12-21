@@ -2,11 +2,12 @@
 // This handles tracking recent recipe interactions
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/database';
+import { createSupabaseServerClient } from '@/lib/supabase';
 import { getAuthUser } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = createSupabaseServerClient();
     console.log('🔍 GET /api/health/recent-recipes - Fetching recent recipes');
     
     const authUser = await getAuthUser(request);
@@ -61,6 +62,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createSupabaseServerClient();
     console.log('➕ POST /api/health/recent-recipes - Tracking recipe access');
     
     const authUser = await getAuthUser(request);

@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { supabase } from '@/lib/database';
+import { createSupabaseServerClient } from '@/lib/supabase';
 
 // GET shopping list
 export async function GET(request: NextRequest) {
   try {
+    const supabase = createSupabaseServerClient();
     const authUser = await getAuthUser(request);
     
     if (!authUser) {
@@ -45,6 +46,7 @@ export async function GET(request: NextRequest) {
 // POST to add recipe to shopping list
 export async function POST(request: NextRequest) {
   try {
+    const supabase = createSupabaseServerClient();
     const authUser = await getAuthUser(request);
     
     if (!authUser) {
@@ -129,6 +131,7 @@ export async function POST(request: NextRequest) {
 // PUT to update entire shopping list
 export async function PUT(request: NextRequest) {
   try {
+    const supabase = createSupabaseServerClient();
     const authUser = await getAuthUser(request);
     
     if (!authUser) {

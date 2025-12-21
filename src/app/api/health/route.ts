@@ -1,10 +1,11 @@
 // src/app/api/health/route.ts
 // Comprehensive health monitoring
 
-import { supabase } from '@/lib/database';
+import { createSupabaseServerClient } from '@/lib/supabase';
 
 export async function GET() {
   try {
+    const supabase = createSupabaseServerClient();
     const checks = await Promise.all([
       checkDatabase(),
       checkCache(),

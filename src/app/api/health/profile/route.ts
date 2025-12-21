@@ -1,7 +1,7 @@
 // src/app/api/health/profile/route.ts
 import { NextRequest } from 'next/server';
 import { getAuthUser } from '@/lib/auth';
-import { supabase } from '@/lib/database';
+import { createSupabaseServerClient } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,6 +9,8 @@ export async function GET(request: NextRequest) {
     if (!authUser) {
       return Response.json({ success: false, error: 'Authentication required' }, { status: 401 });
     }
+
+    const supabase = createSupabaseServerClient();
 
     // Get user's health profile
     const { data: profile, error: profileError } = await supabase
@@ -69,6 +71,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ success: false, error: 'Authentication required' }, { status: 401 });
     }
 
+    const supabase = createSupabaseServerClient();
     const profileData = await request.json();
 
     // Upsert user health profile
