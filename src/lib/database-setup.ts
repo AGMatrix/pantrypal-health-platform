@@ -1,7 +1,7 @@
 // src/lib/database-setup.ts
 // Utility to set up database tables programmatically with RLS enabled
 
-import { supabase } from './database';
+import { supabase } from './supabase';
 
 export async function setupDatabaseTables(): Promise<{
   success: boolean;
