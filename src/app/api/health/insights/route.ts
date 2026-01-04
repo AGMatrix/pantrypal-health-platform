@@ -85,6 +85,8 @@ export async function POST(request: NextRequest) {
 
 async function generateHealthInsights(userId: string) {
   try {
+    const supabase = createSupabaseServerClient();
+
     // Get user's health profile
     const { data: profile } = await supabase
       .from('user_health_profiles')

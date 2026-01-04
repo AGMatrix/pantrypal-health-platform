@@ -1527,6 +1527,8 @@ function getGenericRareConditionData(conditionName: string) {
 
 async function saveRareConditionAnalysis(userId: string, analysisData: any) {
   try {
+    const supabase = createSupabaseServerClient();
+
     // First, ensure the user exists in the users table
     const { data: existingUser, error: userCheckError } = await supabase
       .from('users')

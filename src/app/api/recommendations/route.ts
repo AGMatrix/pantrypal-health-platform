@@ -306,6 +306,7 @@ async function generateRecommendations(preferences: any, userId: string) {
 
 async function getCuisineRecommendations(cuisines: string[]) {
   try {
+    const supabase = createSupabaseServerClient();
     const { data: recipes } = await supabase
       .from('recipes')
       .select('*')
@@ -322,8 +323,9 @@ async function getCuisineRecommendations(cuisines: string[]) {
 
 async function getHealthBasedRecommendations(preferences: any) {
   try {
+    const supabase = createSupabaseServerClient();
     const healthyDietary = ['healthy', 'heart-healthy', 'anti-inflammatory', 'diabetic-friendly', 'low-sodium'];
-    
+
     const { data: recipes } = await supabase
       .from('recipes')
       .select('*')
@@ -340,6 +342,7 @@ async function getHealthBasedRecommendations(preferences: any) {
 
 async function getQuickMealRecommendations() {
   try {
+    const supabase = createSupabaseServerClient();
     const { data: recipes } = await supabase
       .from('recipes')
       .select('*')
@@ -356,6 +359,7 @@ async function getQuickMealRecommendations() {
 
 async function getIngredientBasedRecommendations(ingredients: string[]) {
   try {
+    const supabase = createSupabaseServerClient();
     // This is a simplified version - in a real app, you'd do more sophisticated ingredient matching
     const { data: recipes } = await supabase
       .from('recipes')
@@ -372,6 +376,7 @@ async function getIngredientBasedRecommendations(ingredients: string[]) {
 
 async function getTrendingRecommendations() {
   try {
+    const supabase = createSupabaseServerClient();
     const { data: recipes } = await supabase
       .from('recipes')
       .select('*')
@@ -387,6 +392,7 @@ async function getTrendingRecommendations() {
 
 async function getSeasonalRecommendations() {
   try {
+    const supabase = createSupabaseServerClient();
     const currentMonth = new Date().getMonth();
     let seasonalKeywords = [];
 

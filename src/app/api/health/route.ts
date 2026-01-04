@@ -42,6 +42,7 @@ export async function GET() {
 async function checkDatabase() {
   const startTime = Date.now();
   try {
+    const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
       .from('users')
       .select('count')
